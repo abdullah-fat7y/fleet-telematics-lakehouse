@@ -1,0 +1,2 @@
+run_id,source,started_utc,duration_s,events_read,events_sent,events_dlq,retries,events_per_s,dry_run
+1f14c3e0-1d23-41a7-82de-7fd563563cae,stream,2026-10-23T14:03:16.316851+00:00,3.615,1005,1005,0,0,278.0,False
