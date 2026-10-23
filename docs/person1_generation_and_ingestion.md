@@ -21,12 +21,12 @@ and records what we noticed in the data that matters for the KPIs.
 | 7a. Streaming to Eventstream | Done | `fleet_eventstream` -> `bronze_telemetry` |
 | 8. Bronze table (raw text + arrival time + source) | Done | `bronze_telemetry` |
 | 10. Retry with backoff (1, 2, 4, 8 s) | Done in sender, demo pending | `generator/fleet/stream_sender.py` |
-| 6. Concurrent workers (5,000 vehicles) | Next | - |
+| 6. Concurrent workers (5,000 vehicles) | Done: 16 async workers, 5,000 vehicles, 2 simulated h | `generator/run_fleet.py` |
 | 7b. Batch landing (`Files/landing`) | Next | - |
 | 9. `dlq_telemetry` table | Next (sender already writes a local DLQ file) | - |
-| 11. `bronze_ingestion_log` table | Next (sender already writes a local log) | - |
+| 11. `bronze_ingestion_log` table | Next (full run already writes one row per 10 s locally) | `evidence/person1/full_run/ingestion_intervals.csv` |
 | 12. Recovery demo | Next | - |
-| 13. Speed measurement at full scale | Next (first number: 278 events/s on the sample) | - |
+| 13. Speed measurement at full scale | Done: 2,026 events/s measured (732,019 events in 361 s) | `evidence/person1/full_run/perf.json` |
 
 ---
 
@@ -255,21 +255,43 @@ sample only, one vehicle batch at a time).
 
 ---
 
-## 7. Open items and next steps
+## 7. Full run (5,000 vehicles)
+
+Run `full-20261023T141747Z`, started 2026-10-23 14:17 UTC, measured on a MacBook (Apple Silicon, 10 cores, Python 3.13):
+
+| Metric | Value |
+|---|---|
+| Vehicles | 5,000 (16 async workers, round-robin, one vehicle per worker and per partition) |
+| Simulated time | 2 h (2026-11-01 06:00-08:00 UTC), every vehicle starts its first trip in this window |
+| Readings generated | 724,887 |
+| Lines sent (incl. 7,132 duplicates) | 732,019 |
+| Retries / DLQ | 0 / 0 |
+| Wall time | 361 s |
+| **Throughput (measured)** | **2,026 events/s** (peak 10 s interval ~2,560 events/s) |
+| Generator alone (dry run, measured) | ~65,000 events/s, so the network send is the bottleneck, not generation |
+| Anomaly episodes | 48 cold-chain breaches, 96 excessive idling, 59 route deviations |
+| Bad data | 2,282 malformed, 2,773 missing field, 2,145 wrong type, 2,841 null, 1,459 impossible, 7,132 duplicate, 2,180 late |
+
+Per-run files in `evidence/person1/full_run/`: `perf.json`, `telemetry_truth.csv` (for Person 2's
+evaluation of this run), `bad_data_manifest.csv`, `ingestion_intervals.csv` (one row per 10 s), console output.
+
+Assumed, not measured: a full 24 h day is ~4 million events (~800 per vehicle, measured on 300 vehicles in a dry run),
+which at the same rate would take ~33 min to send.
+
+## 8. Open items and next steps
 
 1. **Append-only proof.** `DESCRIBE HISTORY bronze_telemetry` shows `operation = NULL` because the
    Eventstream writer does not set an operation name. Next: show `operationMetrics` for each version
    (only `numOutputRows` / added files, no removed rows) and confirm no `DELETE`/`UPDATE`/`MERGE`.
-2. **Concurrent full run**: split 5,000 vehicles across workers (asyncio), one vehicle per worker, stream as generated.
+2. **Confirm the full run in Fabric** with `ingestion/notebooks/03_check_full_run.py` (expect 732,019 rows, 5,000 distinct vehicles). Decide whether to also stream a full 24 h day (~4M events).
 3. **Batch path**: workers write files to `Files/landing`; ingestion notebook appends to bronze with `source = 'batch'`.
 4. **`dlq_telemetry` and `bronze_ingestion_log` tables** in Fabric, plus parse-time validation into the DLQ.
 5. **Retry/DLQ demo** (`send_stream.py --fail-first 6`) and **recovery demo** (fix DLQ rows, resend, show them in bronze).
-6. **Speed measurement** at 5,000 vehicles, marked as measured, with machine details.
 7. **Team decision** on the > 90 km/h noise (section 4, point 4).
 
 ---
 
-## 8. Decisions and limitations
+## 9. Decisions and limitations
 
 - Readings exist only while a vehicle is on a trip (telematics reports with ignition on).
 - Each vehicle has its own random stream (`seed + vehicle_id`), so output does not depend on how vehicles are split across workers.
