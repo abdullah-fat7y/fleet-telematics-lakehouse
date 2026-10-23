@@ -20,12 +20,12 @@ and records what we noticed in the data that matters for the KPIs.
 | Day 1-2 handoff: ~1,000-event sample | Done | `Files/sample/sample_events.jsonl` |
 | 7a. Streaming to Eventstream | Done | `fleet_eventstream` -> `bronze_telemetry` |
 | 8. Bronze table (raw text + arrival time + source) | Done | `bronze_telemetry` |
-| 10. Retry with backoff (1, 2, 4, 8 s) | Done in sender, demo pending | `generator/fleet/stream_sender.py` |
+| 10. Retry with backoff (1, 2, 4, 8 s) | Done and demonstrated live | `generator/fleet/stream_sender.py`, `fleet_run.py` |
 | 6. Concurrent workers (5,000 vehicles) | Done: 16 async workers, 5,000 vehicles, 2 simulated h | `generator/run_fleet.py` |
 | 7b. Batch landing (`Files/landing`) | Next | - |
-| 9. `dlq_telemetry` table | Next (sender already writes a local DLQ file) | - |
-| 11. `bronze_ingestion_log` table | Next (full run already writes one row per 10 s locally) | `evidence/person1/full_run/ingestion_intervals.csv` |
-| 12. Recovery demo | Next | - |
+| 9. `dlq_telemetry` table | Done: 10,065 validation failures + 155 send failures, each with reason | notebook `04_dlq_and_ingestion_log` |
+| 11. `bronze_ingestion_log` table | Done: sender runs, 10 s intervals and every validation pass | notebook `04_dlq_and_ingestion_log` |
+| 12. Recovery demo | Done: 155 failed events replayed, DLQ status open -> recovered | `generator/replay_dlq.py` |
 | 13. Speed measurement at full scale | Done: 2,026 events/s measured (732,019 events in 361 s) | `evidence/person1/full_run/perf.json` |
 
 ---
@@ -63,6 +63,8 @@ Same `seed` => byte-identical output (checked by hashing two runs).
 | `fleet_eventstream` | Eventstream | Source `generator_endpoint` (custom endpoint) -> destination Lakehouse table `bronze_telemetry` |
 | `01_load_reference` | Notebook | Loads reference CSVs and the truth table into Delta tables |
 | `02_check_bronze` | Notebook | Counts, distinct vehicles, malformed lines and table history of bronze |
+| `03_check_full_run` | Notebook | Rows, distinct vehicles, arrival lag and partitions for one run |
+| `04_dlq_and_ingestion_log` | Notebook | Validates new bronze rows, builds `dlq_telemetry` and `bronze_ingestion_log`, marks recovered events |
 
 ### 2.2 Why every event is wrapped in an envelope
 
@@ -182,7 +184,18 @@ First load: 1,005 rows, 20 distinct vehicles, 5 lines that are not valid JSON (k
 | `ref_drivers_v2` | 5,200 | `driver_id` | Same columns; 416 drivers changed, `effective_from` = 2026-11-01 18:00 UTC |
 | `ref_trips` | 10,000 | `trip_id` | `vehicle_id`, `driver_id`, `corridor_id`, `direction` (forward/reverse), `origin_depot_id`, `dest_depot_id`, `planned_distance_km`, `planned_start_utc`, `planned_end_utc` |
 
-### 3.5 Evaluation and operational files
+### 3.5 Operational tables (created by notebook 04)
+
+| Table | Key | Columns |
+|---|---|---|
+| `dlq_telemetry` | `dlq_id` | `stage` (`send` / `validation`), `reason` (e.g. `missing_field: rpm`), `raw`, `source`, `run_id`, `arrived_at_utc`, `failed_at_utc`, `retries`, `status` (`open` / `recovered`), `recovered_at_utc`, `recovered_run_id`, `loaded_at_utc` |
+| `bronze_ingestion_log` | `log_id` | `stage` (`sender_run` / `sender_interval` / `bronze_validation`), `run_id`, `source`, `interval_start_utc`, `duration_s`, `events_received`, `events_written`, `events_rejected`, `retries`, `active_vehicles`, `events_per_s`, `loaded_at_utc` |
+| `ingestion_watermark` | `job` | `last_enqueued_utc` (last bronze arrival time validated), `updated_at_utc` |
+
+`bronze_telemetry.source` values: `stream` (live sender), `dlq_replay` (recovered events), later `batch`.
+All three are real telemetry; Person 2 should process all of them.
+
+### 3.6 Evaluation and operational files
 
 | File / table | Columns | Rule |
 |---|---|---|
@@ -231,7 +244,7 @@ Computed on the 1,005-event sample (clean, non-duplicate readings) and the refer
 | Input to the DAG | Table `bronze_telemetry`. New-data check: `max(EventEnqueuedUtcTime)` greater than the last processed watermark. |
 | Incremental reads | Person 2 should keep a watermark on `EventEnqueuedUtcTime` (arrival time), not `event_time` (late events would be missed). |
 | Batch path (planned) | Files land in `Files/landing/`; a notebook appends them to bronze with `source = 'batch'`. This notebook can be the first DAG task or a separate schedule. |
-| DLQ + ingestion log (planned) | A notebook loads `send_failures.jsonl` and `send_log.csv` into `dlq_telemetry` and `bronze_ingestion_log`; schedule it with the DAG so the dashboard's pipeline-health page stays current. |
+| DLQ + ingestion log | Notebook `04_dlq_and_ingestion_log` is the first DAG task ("check for new bronze data" + validation). It is idempotent and incremental (watermark table `ingestion_watermark`). Its row counts feed the pipeline-health page. |
 | Triggering notebooks | Fabric REST API: run a notebook on demand (`POST .../workspaces/{workspaceId}/items/{notebookId}/jobs/instances?jobType=RunNotebook`), or use Fabric's own Apache Airflow job item. Needs a service principal or a user token with access to the workspace. |
 | Secrets | Eventstream connection string lives only in `generator/.env` (git-ignored). Never in the repo, notebooks or DAG code; use Airflow connections / Key Vault. |
 | Reference refresh | Reference tables are static per seed. Re-run `01_load_reference` only when `config.yaml` changes. |
@@ -250,6 +263,11 @@ Computed on the 1,005-event sample (clean, non-duplicate readings) and the refer
 | 5 | ![](../evidence/person1/05_check_bronze_output.png) | Bronze schema, 1,005 rows for the run, 20 vehicles, 5 malformed lines kept, table history |
 | 6 | ![](../evidence/person1/06_check_full_run_code.png) | Notebook `03_check_full_run` for run `full-20261023T141747Z` |
 | 7 | ![](../evidence/person1/07_check_full_run_output.png) | Full run in bronze: 732,019 rows (= events sent), **5,000 distinct vehicles**, 3.45 s average arrival lag, ~183k rows on each of the 4 partitions |
+| 8 | ![](../evidence/person1/08_dlq_notebook_code.png) | Notebook `04_dlq_and_ingestion_log` |
+| 9 | ![](../evidence/person1/09_dlq_before_replay_open.png) | **Before recovery**: 155 send failures `open`; 10,065 validation failures by reason type |
+| 10 | ![](../evidence/person1/10_dlq_after_replay_recovered.png) | **After recovery**: the same 155 are `recovered` |
+| 11 | ![](../evidence/person1/11_ingestion_log_intervals.png) | `bronze_ingestion_log`: validation pass, sender runs, 10 s intervals |
+| 12 | ![](../evidence/person1/12_dlq_examples_and_ingestion_log.png) | Example DLQ rows with exact reasons (`missing_field: rpm`, `wrong_type: odometer_km is not a number`, ...) |
 
 Also in `evidence/person1/`: `config_used.yaml`, `sample_summary.json`, `send_log.csv`
 (first real send: 1,005 events in 3.6 s = 278 events/s, 0 retries, 0 DLQ - measured on a MacBook,
@@ -283,20 +301,78 @@ evaluation of this run), `bad_data_manifest.csv`, `ingestion_intervals.csv` (one
 Assumed, not measured: a full 24 h day is ~4 million events (~800 per vehicle, measured on 300 vehicles in a dry run),
 which at the same rate would take ~33 min to send.
 
-## 8. Open items and next steps
+## 8. Dead-letter queue, ingestion log, retry and recovery
+
+### 8.1 How failures are caught
+
+| Where it fails | What happens | Ends up in |
+|---|---|---|
+| **Sending** (network / Eventstream unavailable) | Retry after 1, 2, 4, 8 s; after the 4th retry the batch is written to `output/dlq/send_failures.jsonl` with the reason | `dlq_telemetry`, `stage = 'send'` |
+| **Reading** (event in bronze cannot be read or fails validation) | Notebook 04 checks each new bronze row: valid JSON, all required fields present and not null, numbers are numbers, `event_time` is ISO 8601 UTC. Bronze is never changed | `dlq_telemetry`, `stage = 'validation'` |
+
+Impossible values (e.g. `engine_temp_c = 900`), duplicates and late events are **not** DLQ cases: they are
+readable, so Person 2 keeps them (flag / deduplicate / place by `event_time`).
+
+### 8.2 Retry demo (measured, live)
+
+`python run_fleet.py --vehicles 20 --from-hours 2 --hours 2.25 --workers 1 --fail-first 6` sends **new** data
+(simulated hours 2.00-2.25, not already in bronze) while simulating 6 failed send attempts:
+
+```
+send failed (simulated transient failure); retry 1/4 in 1s
+send failed (simulated transient failure); retry 2/4 in 2s
+send failed (simulated transient failure); retry 3/4 in 4s
+send failed (simulated transient failure); retry 4/4 in 8s
+gave up after 4 retries -> 155 events to DLQ
+send failed (simulated transient failure); retry 1/4 in 1s     <- next batch recovers after one retry
+```
+
+Result: 545 generated + 4 duplicates = 549 lines = **394 sent + 155 to DLQ**, 5 retries (run `full-20261023T143702Z`).
+
+### 8.3 Recovery demo
+
+1. Notebook 04 loaded the 155 send failures: `send | ConnectionError | open | 155` (screenshot 9).
+2. `python replay_dlq.py` resent them: 155 read, 155 sent, 0 failed (replay run `51cb41ef-...`, `source = 'dlq_replay'`).
+3. Notebook 04 found the same raw events in bronze and marked them: `send | ConnectionError | recovered | 155` (screenshot 10).
+
+### 8.4 Validation results on all bronze rows (733,586)
+
+| Reason type | Rows in DLQ | Injected in full run + sample | Difference (from the two small test runs) |
+|---|---|---|---|
+| `malformed_json` | 2,288 | 2,282 + 5 = 2,287 | +1 (retry demo) |
+| `missing_field` | 2,779 | 2,773 + 5 = 2,778 | +1 (smoke test) |
+| `null_required` | 2,848 | 2,841 + 5 = 2,846 | +2 (retry demo) |
+| `wrong_type` | 2,150 | 2,145 + 5 = 2,150 | 0 |
+| **Total** | **10,065** | | 723,521 rows valid |
+
+Every DLQ count is explained by what the generator injected: nothing broken slipped through and nothing valid
+was rejected. (The retry demo's remaining bad events were among the 155 replayed rows, which the next
+validation pass picks up.)
+
+### 8.5 Running it
+
+```bash
+# on the sender machine, after any run:
+#   upload generator/output/dlq/send_failures.jsonl, output/logs/send_log.csv,
+#   output/logs/ingestion_intervals.csv to the Lakehouse folder Files/ops
+python replay_dlq.py          # resend DLQ entries not replayed yet
+```
+Then run notebook `04_dlq_and_ingestion_log` (safe to re-run; it only checks bronze rows that arrived since
+the last run and at least 2 minutes ago).
+
+## 9. Open items and next steps
 
 1. **Append-only proof.** `DESCRIBE HISTORY bronze_telemetry` shows `operation = NULL` because the
    Eventstream writer does not set an operation name. Next: show `operationMetrics` for each version
    (only `numOutputRows` / added files, no removed rows) and confirm no `DELETE`/`UPDATE`/`MERGE`.
 2. **Team decision**: whether to also stream a full 24 h day (~4M events, ~33 min). The 2 h run already covers all 5,000 vehicles.
 3. **Batch path**: workers write files to `Files/landing`; ingestion notebook appends to bronze with `source = 'batch'`.
-4. **`dlq_telemetry` and `bronze_ingestion_log` tables** in Fabric, plus parse-time validation into the DLQ.
-5. **Retry/DLQ demo** (`send_stream.py --fail-first 6`) and **recovery demo** (fix DLQ rows, resend, show them in bronze).
-7. **Team decision** on the > 90 km/h noise (section 4, point 4).
+4. **Automate the ops upload**: the three sender files are uploaded to `Files/ops` by hand; Person 4 can add an upload step (OneLake API) or run the sender inside Fabric.
+5. **Team decision** on the > 90 km/h noise (section 4, point 4).
 
 ---
 
-## 9. Decisions and limitations
+## 10. Decisions and limitations
 
 - Readings exist only while a vehicle is on a trip (telematics reports with ignition on).
 - Each vehicle has its own random stream (`seed + vehicle_id`), so output does not depend on how vehicles are split across workers.

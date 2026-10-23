@@ -1,0 +1,5 @@
+run_id,source,started_utc,duration_s,events_read,events_sent,events_dlq,retries,events_per_s,dry_run
+full-20261023T141733Z,stream,2026-10-23T14:17:33.808442+00:00,8.3,166,168,0,0,20.3,False
+full-20261023T141747Z,stream,2026-10-23T14:17:47.813972+00:00,361.3,724887,732019,0,0,2026.1,False
+full-20261023T143702Z,stream,2026-10-23T14:37:02.567519+00:00,22.7,545,394,155,5,17.4,False
+51cb41ef-e604-487f-aebe-f3515d95a8db,dlq_replay,2026-10-23T14:53:16.311710+00:00,2.226,155,155,0,0,69.6,False

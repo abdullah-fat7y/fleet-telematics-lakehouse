@@ -4,7 +4,8 @@
     python run_fleet.py --hours 2                # all vehicles, first 2 simulated hours
     python run_fleet.py --vehicles 50 --hours 0.25   # small smoke test
     python run_fleet.py --dry-run                # generate only, measure generator speed
-    python run_fleet.py --fail-first 6 ...       # demo: retries with backoff, then DLQ
+    python run_fleet.py --vehicles 20 --from-hours 2 --hours 2.25 --workers 1 --fail-first 6
+                                                 # retry demo: new data, retries with backoff, then DLQ
 
 Outputs per run in output/runs/<run_id>/: telemetry_truth.csv, bad_data_manifest.csv, perf.json.
 Logs: output/logs/ingestion_intervals.csv (one row per interval) and output/logs/send_log.csv.
@@ -24,7 +25,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--config", default=os.path.join(HERE, "config.yaml"))
-    ap.add_argument("--hours", type=float, help="simulated hours (default: config)")
+    ap.add_argument("--hours", type=float, help="simulate up to this hour (default: config)")
+    ap.add_argument("--from-hours", type=float, default=0.0,
+                    help="only send readings from this simulated hour on (e.g. new data for a demo)")
     ap.add_argument("--vehicles", type=int, help="only the first N vehicles (default: all)")
     ap.add_argument("--workers", type=int, help="number of async workers (default: config)")
     ap.add_argument("--dry-run", action="store_true")
@@ -37,7 +40,8 @@ def main():
     if not conn and not args.dry_run:
         raise SystemExit("Set EVENTSTREAM_CONNECTION_STRING in generator/.env (see README).")
     perf = asyncio.run(run_fleet(cfg, HERE, conn, hours=args.hours, max_vehicles=args.vehicles,
-                                 workers=args.workers, fail_first=args.fail_first, dry_run=args.dry_run))
+                                 workers=args.workers, fail_first=args.fail_first, dry_run=args.dry_run,
+                                 from_hours=args.from_hours))
     print(json.dumps(perf, indent=2))
 
 

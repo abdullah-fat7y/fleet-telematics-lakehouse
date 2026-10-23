@@ -1,0 +1,13 @@
+DLQ entries: 155, already replayed: 0, to replay: 155
+{
+  "replay_run_id": "51cb41ef-e604-487f-aebe-f3515d95a8db",
+  "replayed_from_runs": [
+    "full-20261023T143702Z"
+  ],
+  "events_read": 155,
+  "events_sent": 155,
+  "events_dlq": 0,
+  "retries": 0,
+  "duration_s": 2.226,
+  "events_per_s": 69.6
+}
