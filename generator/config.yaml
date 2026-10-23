@@ -101,6 +101,13 @@ sample:
   min_each_anomaly: 2
   min_each_bad_type: 5
 
+# Sending events to the Fabric Eventstream (custom endpoint, Event Hub protocol).
+streaming:
+  batch_max_events: 200        # events per send call (well under the 1 MB batch limit)
+  retry_delays_s: [1, 2, 4, 8] # wait this long before each retry; after the last one -> DLQ
+
 output:
   reference_dir: "output/Files/reference"
   sample_dir: "output/Files/sample"
+  send_dlq_file: "output/dlq/send_failures.jsonl"
+  send_log_file: "output/logs/send_log.csv"
