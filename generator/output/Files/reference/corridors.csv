@@ -1,0 +1,31 @@
+corridor_id,name,origin_depot_id,dest_depot_id,planned_distance_km,point_count,reefer_temp_min_c,reefer_temp_max_c
+COR-001,Alexandria - Hurghada,DEP-ALX,DEP-HRG,578.565,597,2.0,8.0
+COR-002,Alexandria - Asyut,DEP-ALX,DEP-AST,463.829,478,2.0,8.0
+COR-003,Cairo - Mansoura,DEP-CAI,DEP-MNS,112.444,116,2.0,8.0
+COR-004,Ismailia - Minya,DEP-ISM,DEP-MNY,313.422,324,2.0,8.0
+COR-005,Asyut - Port Said,DEP-AST,DEP-PSD,466.978,482,2.0,8.0
+COR-006,Alexandria - Suez,DEP-ALX,DEP-SUZ,286.955,296,2.0,8.0
+COR-007,Minya - Tanta,DEP-MNY,DEP-TNT,298.768,309,2.0,8.0
+COR-008,Asyut - Minya,DEP-AST,DEP-MNY,112.428,116,2.0,8.0
+COR-009,Asyut - Hurghada,DEP-AST,DEP-HRG,260.096,269,2.0,8.0
+COR-010,Alexandria - Minya,DEP-ALX,DEP-MNY,352.949,364,2.0,8.0
+COR-011,Hurghada - Minya,DEP-HRG,DEP-MNY,316.502,326,2.0,8.0
+COR-012,Asyut - Ismailia,DEP-AST,DEP-ISM,394.421,407,2.0,8.0
+COR-013,Hurghada - Ismailia,DEP-HRG,DEP-ISM,400.513,413,2.0,8.0
+COR-014,Asyut - Cairo,DEP-AST,DEP-CAI,318.465,329,2.0,8.0
+COR-015,Port Said - Suez,DEP-PSD,DEP-SUZ,146.884,152,2.0,8.0
+COR-016,Mansoura - Minya,DEP-MNS,DEP-MNY,331.581,342,2.0,8.0
+COR-017,Alexandria - Tanta,DEP-ALX,DEP-TNT,113.076,117,2.0,8.0
+COR-018,Ismailia - Port Said,DEP-ISM,DEP-PSD,74.738,78,2.0,8.0
+COR-019,Cairo - Ismailia,DEP-CAI,DEP-ISM,117.148,121,2.0,8.0
+COR-020,Cairo - Suez,DEP-CAI,DEP-SUZ,126.936,132,2.0,8.0
+COR-021,Alexandria - Mansoura,DEP-ALX,DEP-MNS,140.144,145,2.0,8.0
+COR-022,Alexandria - Ismailia,DEP-ALX,DEP-ISM,234.975,242,2.0,8.0
+COR-023,Ismailia - Suez,DEP-ISM,DEP-SUZ,75.881,78,2.0,8.0
+COR-024,Hurghada - Port Said,DEP-HRG,DEP-PSD,469.037,484,2.0,8.0
+COR-025,Suez - Tanta,DEP-SUZ,DEP-TNT,174.925,181,2.0,8.0
+COR-026,Minya - Port Said,DEP-MNY,DEP-PSD,381.579,394,2.0,8.0
+COR-027,Ismailia - Mansoura,DEP-ISM,DEP-MNS,98.673,103,2.0,8.0
+COR-028,Cairo - Port Said,DEP-CAI,DEP-PSD,169.897,176,2.0,8.0
+COR-029,Cairo - Minya,DEP-CAI,DEP-MNY,220.605,228,2.0,8.0
+COR-030,Hurghada - Mansoura,DEP-HRG,DEP-MNS,482.539,498,2.0,8.0

@@ -1,0 +1,106 @@
+# Fleet telematics generator settings.
+# Every number the generator uses comes from this file. Same seed => identical data.
+
+seed: 42
+
+simulation:
+  start_time_utc: "2026-11-01T06:00:00Z"
+  hours: 24                    # how many hours to simulate in a full run
+  reading_interval_s: 30       # one reading per vehicle every 30 seconds (team proposal)
+
+fleet:
+  vehicles: 5000
+  refrigerated_share: 0.30     # share of vehicles that are reefer trucks; the rest are dry vans
+  drivers: 5200                # a few more drivers than vehicles (spares)
+  driver_changes_share: 0.08   # share of drivers whose depot/risk level changes in drivers_v2
+  trips_per_vehicle: 2
+
+# Depots sit in real cities so the GPS points look believable on a map.
+# Swap these for another country if the team prefers; corridors are built between them.
+depots:
+  - {depot_id: DEP-CAI, name: Cairo,          lat: 30.0444, lon: 31.2357}
+  - {depot_id: DEP-ALX, name: Alexandria,     lat: 31.2001, lon: 29.9187}
+  - {depot_id: DEP-PSD, name: Port Said,      lat: 31.2653, lon: 32.3019}
+  - {depot_id: DEP-SUZ, name: Suez,           lat: 29.9668, lon: 32.5498}
+  - {depot_id: DEP-ISM, name: Ismailia,       lat: 30.5965, lon: 32.2715}
+  - {depot_id: DEP-TNT, name: Tanta,          lat: 30.7865, lon: 31.0004}
+  - {depot_id: DEP-MNS, name: Mansoura,       lat: 31.0409, lon: 31.3785}
+  - {depot_id: DEP-MNY, name: Minya,          lat: 28.1099, lon: 30.7503}
+  - {depot_id: DEP-AST, name: Asyut,          lat: 27.1809, lon: 31.1837}
+  - {depot_id: DEP-HRG, name: Hurghada,       lat: 27.2579, lon: 33.8116}
+
+corridors:
+  count: 30                    # fixed routes between depot pairs
+  point_spacing_km: 1.0        # GPS points along each corridor about 1 km apart
+  max_bend_km: 8.0             # how far a corridor bows away from the straight line (makes it road-like)
+  reefer_temp_min_c: 2.0       # allowed cargo range for refrigerated cargo
+  reefer_temp_max_c: 8.0
+
+# Realistic heavy-truck behaviour (simulation values).
+# Highway cruise ~80-90 km/h; diesel truck idle ~600-750 rpm, cruise ~1300-1700 rpm;
+# coolant normally 85-95 C; long-haul trucks use ~30-35 L/100 km (~27 L/h at 85 km/h);
+# idling burns ~2-3 L/h. Reefer setpoint for chilled goods is ~5 C (middle of 2-8 C).
+vehicle_behaviour:
+  cruise_speed_kmh: 82
+  speed_noise_kmh: 6
+  idle_rpm: 700
+  rpm_noise: 40
+  rpm_per_kmh: 12              # rpm ~= idle_rpm + speed * rpm_per_kmh  (82 km/h -> ~1680 rpm)
+  max_rpm: 1900
+  engine_start_temp_c: 30
+  engine_operating_temp_c: 90
+  engine_warmup_minutes: 12
+  engine_temp_noise_c: 1.0
+  fuel_idle_lph: 2.5
+  fuel_per_kmh_lph: 0.33       # fuel_rate ~= idle + speed * this  (82 km/h -> ~29.6 L/h)
+  fuel_noise_lph: 1.0
+  cargo_setpoint_c: 5.0
+  cargo_noise_c: 0.4
+  ramp_up_readings: 4          # readings to reach cruise speed after a trip starts
+  planned_stop_every_min: 120  # a short planned stop every 2 hours of trip time
+  planned_stop_minutes: 5      # engine off during planned stops (rpm 0) - not idling
+  engine_cooling_per_reading_c: 0.4
+  odometer_start_min_km: 20000
+  odometer_start_max_km: 400000
+
+# How often each anomaly is injected (rates are per vehicle-hour).
+anomalies:
+  cold_chain_breach:
+    rate_per_reefer_hour: 0.02
+    min_readings: 4            # must exceed the 3-reading detection threshold
+    max_readings: 12
+    breach_temp_min_c: 9.0
+    breach_temp_max_c: 14.0
+  excessive_idling:
+    rate_per_vehicle_hour: 0.015
+    min_minutes: 12            # must exceed the 10-minute detection threshold
+    max_minutes: 30
+  route_deviation:
+    rate_per_vehicle_hour: 0.01
+    min_readings: 4            # must exceed the 3-reading detection threshold
+    max_readings: 10
+    offset_min_km: 2.5         # must exceed the 2 km detection threshold
+    offset_max_km: 6.0
+
+# Deliberate bad data (share of all emitted events). Separate from the anomalies above.
+bad_data:
+  malformed_json_rate: 0.003   # broken structure, cannot be parsed
+  missing_field_rate: 0.004    # a required field is removed
+  wrong_type_rate: 0.003       # e.g. speed_kmh sent as "fast"
+  null_required_rate: 0.004    # a required field present but null
+  duplicate_rate: 0.01         # exact same event sent twice (same event_id)
+  impossible_value_rate: 0.002 # e.g. engine_temp_c = 900
+  late_event_rate: 0.003       # event_time far in the past
+  late_event_delay_hours: 6
+
+# Small handoff sample for Person 2 (day 1-2 deliverable).
+sample:
+  vehicles: 20
+  target_events: 1000
+  # The sample forces at least this many of each anomaly and bad-data type so all of them appear.
+  min_each_anomaly: 2
+  min_each_bad_type: 5
+
+output:
+  reference_dir: "output/Files/reference"
+  sample_dir: "output/Files/sample"
