@@ -1,0 +1,36 @@
+{
+  "run_id": "batch-20261023T150119Z",
+  "mode": "batch",
+  "measured": true,
+  "dry_run": false,
+  "files_written": 62,
+  "vehicles": 5000,
+  "simulated_hours": 2.5,
+  "workers": 16,
+  "events_generated": 247337,
+  "events_sent": 249752,
+  "events_dlq": 0,
+  "retries": 0,
+  "duration_s": 11.6,
+  "events_per_s": 21443.8,
+  "anomaly_episodes": {
+    "cold_chain_breach": 15,
+    "excessive_idling": 55,
+    "route_deviation": 19
+  },
+  "bad_data_events": {
+    "duplicate": 2415,
+    "impossible_value": 519,
+    "late_event": 770,
+    "malformed_json": 786,
+    "missing_field": 941,
+    "null_required": 932,
+    "wrong_type": 751
+  },
+  "machine": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "processor": "arm",
+    "cpu_count": 10,
+    "python": "3.13.13"
+  }
+}

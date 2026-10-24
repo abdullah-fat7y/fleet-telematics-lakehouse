@@ -48,10 +48,13 @@ def vehicle_stream(cfg, ref, vehicle, end_time):
 class Run:
     """Shared counters, outputs and logs for one full run."""
 
-    def __init__(self, cfg, base_dir, n_vehicles, hours, workers, fail_first, dry_run):
+    def __init__(self, cfg, base_dir, n_vehicles, hours, workers, fail_first, dry_run, mode="stream"):
         self.cfg, self.base_dir = cfg, base_dir
-        self.run_id = datetime.now(timezone.utc).strftime("full-%Y%m%dT%H%M%SZ")
+        self.mode = mode  # "stream" (Eventstream) or "batch" (files for Files/landing)
+        self.run_id = datetime.now(timezone.utc).strftime(f"{'batch' if mode == 'batch' else 'full'}-%Y%m%dT%H%M%SZ")
         self.n_vehicles, self.hours, self.workers, self.dry_run = n_vehicles, hours, workers, dry_run
+        self.landing_dir = os.path.join(base_dir, cfg["output"]["landing_dir"], self.run_id)
+        self.files_written = 0
         self.fail_remaining = fail_first
         self.generated = self.sent = self.dlq = self.retries = 0
         self.truth, self.manifest = [], []
@@ -102,7 +105,8 @@ class Run:
         write_csv(os.path.join(self.run_dir, "bad_data_manifest.csv"), self.manifest,
                   ["event_id", "bad_type", "detail"])
         perf = {
-            "run_id": self.run_id, "measured": True, "dry_run": self.dry_run,
+            "run_id": self.run_id, "mode": self.mode, "measured": True, "dry_run": self.dry_run,
+            "files_written": self.files_written if self.mode == "batch" else None,
             "vehicles": self.n_vehicles, "simulated_hours": self.hours, "workers": self.workers,
             "events_generated": self.generated, "events_sent": self.sent, "events_dlq": self.dlq,
             "retries": self.retries, "duration_s": round(duration, 1),
@@ -123,19 +127,34 @@ class Run:
             if new:
                 w.writerow(["run_id", "source", "started_utc", "duration_s", "events_read", "events_sent",
                             "events_dlq", "retries", "events_per_s", "dry_run"])
-            w.writerow([self.run_id, "stream", datetime.fromtimestamp(self.started, timezone.utc).isoformat(),
+            w.writerow([self.run_id, self.mode, datetime.fromtimestamp(self.started, timezone.utc).isoformat(),
                         perf["duration_s"], self.generated, self.sent, self.dlq, self.retries,
                         perf["events_per_s"], self.dry_run])
         return perf
 
 
 class Worker:
-    def __init__(self, run, ref, vehicles, start_time, end_time, client, partitions):
+    def __init__(self, run, ref, vehicles, start_time, end_time, client, partitions, index=0):
         self.run, self.cfg, self.ref = run, run.cfg, ref
         self.vehicles, self.end_time = vehicles, end_time
         self.window_start = fmt_utc(start_time)  # readings before this are simulated (for state) but not sent
         self.client, self.partitions = client, partitions
+        self.index, self.files = index, 0
         self.buffers = {}
+        self.flush_at = (self.cfg["batch"]["file_max_events"] if run.mode == "batch"
+                         else self.cfg["streaming"]["batch_max_events"])
+
+    def _write_file(self, envelopes):
+        """Batch mode: one JSON-lines file of raw events, written to .tmp first so an uploader
+        never picks up a half-written file. The file name carries the write time (= sent_at)."""
+        os.makedirs(self.run.landing_dir, exist_ok=True)
+        self.files += 1
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+        path = os.path.join(self.run.landing_dir, f"{self.run.run_id}_w{self.index:02d}_{self.files:05d}_{stamp}.jsonl")
+        with open(path + ".tmp", "w") as f:
+            f.write("\n".join(env["raw"] for env in envelopes) + "\n")
+        os.replace(path + ".tmp", path)
+        self.run.files_written += 1
 
     def _partition(self, vehicle_id):
         return self.partitions[zlib.crc32(vehicle_id.encode()) % len(self.partitions)] if self.partitions else None
@@ -147,7 +166,9 @@ class Worker:
                 if self.run.fail_remaining > 0:
                     self.run.fail_remaining -= 1
                     raise ConnectionError("simulated transient failure")
-                if self.client is not None:
+                if self.run.mode == "batch" and not self.run.dry_run:
+                    self._write_file(envelopes)
+                elif self.client is not None:
                     from azure.eventhub import EventData
                     batch = await self.client.create_batch(partition_id=partition)
                     for env in envelopes:
@@ -167,8 +188,8 @@ class Worker:
     async def _add(self, vehicle_id, raw):
         partition = self._partition(vehicle_id)
         buf = self.buffers.setdefault(partition, [])
-        buf.append({"raw": raw, "source": "stream", "sent_at_utc": now_utc(), "run_id": self.run.run_id})
-        if len(buf) >= self.cfg["streaming"]["batch_max_events"]:
+        buf.append({"raw": raw, "source": self.run.mode, "sent_at_utc": now_utc(), "run_id": self.run.run_id})
+        if len(buf) >= self.flush_at:
             self.buffers[partition] = []
             await self._send(partition, buf)
 
@@ -215,26 +236,26 @@ class Worker:
 
 
 async def run_fleet(cfg, base_dir, connection_string, hours=None, max_vehicles=None, workers=None,
-                    fail_first=0, dry_run=False, from_hours=0.0):
+                    fail_first=0, dry_run=False, from_hours=0.0, mode="stream"):
     ref = load_reference(os.path.join(base_dir, cfg["output"]["reference_dir"]))
     vehicles = sorted(ref["vehicles"].values(), key=lambda v: v["vehicle_id"])[:max_vehicles]
     hours = hours or cfg["simulation"]["hours"]
     workers = workers or cfg["streaming"]["workers"]
     sim_start = parse_utc(cfg["simulation"]["start_time_utc"])
     start_time, end_time = sim_start + timedelta(hours=from_hours), sim_start + timedelta(hours=hours)
-    run = Run(cfg, base_dir, len(vehicles), hours, workers, fail_first, dry_run)
-    print(f"run {run.run_id}: {len(vehicles)} vehicles, simulated h {from_hours}-{hours}, {workers} workers"
+    run = Run(cfg, base_dir, len(vehicles), hours, workers, fail_first, dry_run, mode)
+    print(f"{mode} run {run.run_id}: {len(vehicles)} vehicles, simulated h {from_hours}-{hours}, {workers} workers"
           f"{' (dry run)' if dry_run else ''}")
 
     clients, partitions = [], None
-    if not dry_run:
+    if mode == "stream" and not dry_run:
         from azure.eventhub.aio import EventHubProducerClient
         clients = [EventHubProducerClient.from_connection_string(connection_string, retry_total=0)
                    for _ in range(workers)]
         partitions = await clients[0].get_partition_ids()
         print(f"Eventstream partitions: {len(partitions)}")
 
-    pool = [Worker(run, ref, vehicles[i::workers], start_time, end_time, clients[i] if clients else None, partitions)
+    pool = [Worker(run, ref, vehicles[i::workers], start_time, end_time, clients[i] if clients else None, partitions, i)
             for i in range(workers)]
     logger = asyncio.create_task(run.interval_logger())
     try:
@@ -243,4 +264,7 @@ async def run_fleet(cfg, base_dir, connection_string, hours=None, max_vehicles=N
         logger.cancel()
         for c in clients:
             await c.close()
-    return run.finish()
+    perf = run.finish()
+    if mode == "batch" and not dry_run:
+        print(f"wrote {run.files_written} files to {run.landing_dir}")
+    return perf

@@ -108,10 +108,22 @@ streaming:
   workers: 16                  # concurrent async workers for the full run; a vehicle always stays on one worker
   log_interval_s: 10           # one ingestion-log row per interval during the full run
 
+# Batch path: workers write JSON-lines files that are uploaded to the Lakehouse Files/landing folder.
+batch:
+  file_max_events: 5000        # events per landing file
+  upload_every_s: 30           # how often upload_to_onelake.py --watch looks for new files
+
+# Where the Lakehouse lives in OneLake (names only - no secrets).
+onelake:
+  account_url: "https://onelake.dfs.fabric.microsoft.com"
+  workspace: "Fleet_Telematics_Project"
+  lakehouse: "fleet_lakehouse"
+
 output:
   reference_dir: "output/Files/reference"
   sample_dir: "output/Files/sample"
   send_dlq_file: "output/dlq/send_failures.jsonl"
   send_log_file: "output/logs/send_log.csv"
   interval_log_file: "output/logs/ingestion_intervals.csv"
+  landing_dir: "output/landing"  # batch files, one folder per run
   runs_dir: "output/runs"      # per-run truth table, bad-data manifest and performance record

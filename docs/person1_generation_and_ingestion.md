@@ -22,7 +22,7 @@ and records what we noticed in the data that matters for the KPIs.
 | 8. Bronze table (raw text + arrival time + source) | Done | `bronze_telemetry` |
 | 10. Retry with backoff (1, 2, 4, 8 s) | Done and demonstrated live | `generator/fleet/stream_sender.py`, `fleet_run.py` |
 | 6. Concurrent workers (5,000 vehicles) | Done: 16 async workers, 5,000 vehicles, 2 simulated h | `generator/run_fleet.py` |
-| 7b. Batch landing (`Files/landing`) | Next | - |
+| 7b. Batch landing (`Files/landing`) | Done: 62 files, 249,752 events loaded into bronze with `source = 'batch'` | `run_fleet.py --mode batch`, `upload_to_onelake.py`, notebook `05_load_landing` |
 | 9. `dlq_telemetry` table | Done: 10,065 validation failures + 155 send failures, each with reason | notebook `04_dlq_and_ingestion_log` |
 | 11. `bronze_ingestion_log` table | Done: sender runs, 10 s intervals and every validation pass | notebook `04_dlq_and_ingestion_log` |
 | 12. Recovery demo | Done: 155 failed events replayed, DLQ status open -> recovered | `generator/replay_dlq.py` |
@@ -41,7 +41,7 @@ flowchart LR
     ES --> B[(bronze_telemetry)]
     S -.->|after 4 failed retries| DLQ[(DLQ file -> dlq_telemetry)]
     S -.-> LOG[(send log -> bronze_ingestion_log)]
-    G -.->|planned| L[Files/landing batch files] -.-> B
+    G -->|batch files .jsonl| U[upload_to_onelake.py] --> L[Files/landing] -->|notebook 05| B
     B --> P2[Person 2: silver]
 ```
 
@@ -65,6 +65,7 @@ Same `seed` => byte-identical output (checked by hashing two runs).
 | `02_check_bronze` | Notebook | Counts, distinct vehicles, malformed lines and table history of bronze |
 | `03_check_full_run` | Notebook | Rows, distinct vehicles, arrival lag and partitions for one run |
 | `04_dlq_and_ingestion_log` | Notebook | Validates new bronze rows, builds `dlq_telemetry` and `bronze_ingestion_log`, marks recovered events |
+| `05_load_landing` | Notebook | Batch path: loads new files from `Files/landing` into bronze (`source = 'batch'`), archives them |
 
 ### 2.2 Why every event is wrapped in an envelope
 
@@ -190,9 +191,10 @@ First load: 1,005 rows, 20 distinct vehicles, 5 lines that are not valid JSON (k
 |---|---|---|
 | `dlq_telemetry` | `dlq_id` | `stage` (`send` / `validation`), `reason` (e.g. `missing_field: rpm`), `raw`, `source`, `run_id`, `arrived_at_utc`, `failed_at_utc`, `retries`, `status` (`open` / `recovered`), `recovered_at_utc`, `recovered_run_id`, `loaded_at_utc` |
 | `bronze_ingestion_log` | `log_id` | `stage` (`sender_run` / `sender_interval` / `bronze_validation`), `run_id`, `source`, `interval_start_utc`, `duration_s`, `events_received`, `events_written`, `events_rejected`, `retries`, `active_vehicles`, `events_per_s`, `loaded_at_utc` |
+| `landing_files_loaded` | `file_name` | `run_id`, `rows`, `file_written_utc`, `loaded_at_utc` (created by notebook 05; a file is never loaded twice) |
 | `ingestion_watermark` | `job` | `last_enqueued_utc` (last bronze arrival time validated), `updated_at_utc` |
 
-`bronze_telemetry.source` values: `stream` (live sender), `dlq_replay` (recovered events), later `batch`.
+`bronze_telemetry.source` values: `stream` (live sender), `batch` (landing files), `dlq_replay` (recovered events).
 All three are real telemetry; Person 2 should process all of them.
 
 ### 3.6 Evaluation and operational files
@@ -243,10 +245,10 @@ Computed on the 1,005-event sample (clean, non-duplicate readings) and the refer
 | What runs outside Airflow | The generator/sender and the Eventstream run continuously (work plan Step 3). Airflow does **not** start them. |
 | Input to the DAG | Table `bronze_telemetry`. New-data check: `max(EventEnqueuedUtcTime)` greater than the last processed watermark. |
 | Incremental reads | Person 2 should keep a watermark on `EventEnqueuedUtcTime` (arrival time), not `event_time` (late events would be missed). |
-| Batch path (planned) | Files land in `Files/landing/`; a notebook appends them to bronze with `source = 'batch'`. This notebook can be the first DAG task or a separate schedule. |
+| Batch path | `upload_to_onelake.py landing --watch` drops files into `Files/landing/` every 30 s. DAG order: notebook `05_load_landing` first, then `04_dlq_and_ingestion_log` (validates both stream and batch rows). |
 | DLQ + ingestion log | Notebook `04_dlq_and_ingestion_log` is the first DAG task ("check for new bronze data" + validation). It is idempotent and incremental (watermark table `ingestion_watermark`). Its row counts feed the pipeline-health page. |
 | Triggering notebooks | Fabric REST API: run a notebook on demand (`POST .../workspaces/{workspaceId}/items/{notebookId}/jobs/instances?jobType=RunNotebook`), or use Fabric's own Apache Airflow job item. Needs a service principal or a user token with access to the workspace. |
-| Secrets | Eventstream connection string lives only in `generator/.env` (git-ignored). Never in the repo, notebooks or DAG code; use Airflow connections / Key Vault. |
+| Secrets | Eventstream connection string and the Fabric tenant ID live only in `generator/.env` (git-ignored). Never in the repo, notebooks or DAG code; use Airflow connections / Key Vault. OneLake uploads sign in interactively once (token cached in the macOS keychain). |
 | Reference refresh | Reference tables are static per seed. Re-run `01_load_reference` only when `config.yaml` changes. |
 | Evidence for the performance record | `send_log.csv` -> events/s per run (measured), machine noted separately. |
 
@@ -268,6 +270,9 @@ Computed on the 1,005-event sample (clean, non-duplicate readings) and the refer
 | 10 | ![](../evidence/person1/10_dlq_after_replay_recovered.png) | **After recovery**: the same 155 are `recovered` |
 | 11 | ![](../evidence/person1/11_ingestion_log_intervals.png) | `bronze_ingestion_log`: validation pass, sender runs, 10 s intervals |
 | 12 | ![](../evidence/person1/12_dlq_examples_and_ingestion_log.png) | Example DLQ rows with exact reasons (`missing_field: rpm`, `wrong_type: odometer_km is not a number`, ...) |
+| 13 | ![](../evidence/person1/13_batch_validated_dlq.png) | Batch rows validated by notebook 04: 249,907 new rows, 3,414 to DLQ |
+| 14 | ![](../evidence/person1/14_ingestion_log_with_batch.png) | Ingestion log with the batch sender run (249,752 lines in 62 files) and the `batch_load` row (249,752 rows into bronze) |
+| 15 | ![](../evidence/person1/15_load_landing_output.png) | Notebook `05_load_landing`: 62 files, 249,752 rows appended as `batch`; bronze by source: stream 733,586, batch 249,752, dlq_replay 155 |
 
 Also in `evidence/person1/`: `config_used.yaml`, `sample_summary.json`, `send_log.csv`
 (first real send: 1,005 events in 3.6 s = 278 events/s, 0 retries, 0 DLQ - measured on a MacBook,
@@ -360,19 +365,41 @@ python replay_dlq.py          # resend DLQ entries not replayed yet
 Then run notebook `04_dlq_and_ingestion_log` (safe to re-run; it only checks bronze rows that arrived since
 the last run and at least 2 minutes ago).
 
-## 9. Open items and next steps
+## 9. Batch path (Files/landing)
+
+Both sending modes produce the same raw event lines; only the transport differs.
+
+| Step | What | Measured |
+|---|---|---|
+| 1. Generate | `python run_fleet.py --mode batch --from-hours 2 --hours 2.5`: 16 workers write JSON-lines files (max 5,000 events each) to `output/landing/<run_id>/`, via a `.tmp` file + rename | 5,000 vehicles, 249,752 lines, **62 files in 11.6 s** (run `batch-20261023T150119Z`) |
+| 2. Drop into landing | `python upload_to_onelake.py landing [--watch]` uploads new files to `Files/landing/<run_id>/` (upload as `.uploading`, rename when complete; 1-2-4-8 s retry) | 62 of 62 files uploaded |
+| 3. Load | Notebook `05_load_landing` appends every line to `bronze_telemetry` with `source = 'batch'`, records the file in `landing_files_loaded`, moves it to `Files/archive/landing/` | **249,752 rows** into bronze (`batch_load` row in the ingestion log) |
+| 4. Validate | Notebook `04` validates batch rows exactly like streamed rows | 249,907 rows checked (249,752 batch + 155 replayed), **3,414 to DLQ** |
+
+Bronze now holds: `stream` 733,586 + `dlq_replay` 155 + `batch` 249,752 = **983,493 rows**.
+
+DLQ reconciliation for this step: 787 malformed, 942 missing field, 934 null, 751 wrong type = 3,414 =
+batch run injections (786 / 941 / 932 / 751) + the 5 broken events that were inside the 155 replayed rows.
+
+**Time coverage.** Stream run: simulated 06:00-08:00; batch run: 08:00-08:30, so every vehicle continues
+seamlessly. The 20 retry-demo vehicles also sent 08:00-08:15 by stream, so those readings arrive through
+**both** paths with the same `event_id` - a deliberate cross-path duplicate case for Person 2's dedup.
+
+The `ops` upload (`python upload_to_onelake.py ops`) also replaces the manual upload of the DLQ file and
+sender logs to `Files/ops` from section 8.
+
+## 10. Open items and next steps
 
 1. **Append-only proof.** `DESCRIBE HISTORY bronze_telemetry` shows `operation = NULL` because the
    Eventstream writer does not set an operation name. Next: show `operationMetrics` for each version
    (only `numOutputRows` / added files, no removed rows) and confirm no `DELETE`/`UPDATE`/`MERGE`.
 2. **Team decision**: whether to also stream a full 24 h day (~4M events, ~33 min). The 2 h run already covers all 5,000 vehicles.
-3. **Batch path**: workers write files to `Files/landing`; ingestion notebook appends to bronze with `source = 'batch'`.
-4. **Automate the ops upload**: the three sender files are uploaded to `Files/ops` by hand; Person 4 can add an upload step (OneLake API) or run the sender inside Fabric.
-5. **Team decision** on the > 90 km/h noise (section 4, point 4).
+3. **Fabric trial ends in ~13 days (banner on 2026-10-24).** When it ends the workspace is deleted. Keep all code in GitHub (done), export evidence regularly, and agree with the workspace owner on a plan (another member's trial or a paid capacity) before then.
+4. **Team decision** on the > 90 km/h noise (section 4, point 4).
 
 ---
 
-## 10. Decisions and limitations
+## 11. Decisions and limitations
 
 - Readings exist only while a vehicle is on a trip (telematics reports with ignition on).
 - Each vehicle has its own random stream (`seed + vehicle_id`), so output does not depend on how vehicles are split across workers.
