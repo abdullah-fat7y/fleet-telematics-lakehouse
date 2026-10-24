@@ -22,6 +22,10 @@ generator -> Eventstream -> bronze -> (Spark) silver -> (warehouse) gold -> Powe
 | `tests/` | All | Tests |
 | `evidence/` | All | Screenshots, logs and outputs for grading |
 
+## Documentation
+
+- [Person 1 - data generation and ingestion](docs/person1_generation_and_ingestion.md): what was built, data dictionary, KPI observations, orchestration needs
+
 ## Quick start (generator)
 
 ```bash
