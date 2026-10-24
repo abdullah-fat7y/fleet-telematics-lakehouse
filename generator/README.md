@@ -46,6 +46,22 @@ impossible value and late event.
 - Late events keep their real `event_time` and are delivered later in the stream (in the sample: at the end of the file).
 - In the sample only, idling episodes are capped at ~20 min so they fit inside 50 readings.
 
+## Streaming to bronze (Eventstream)
+
+`send_stream.py` sends raw lines to the Fabric Eventstream custom endpoint. Each line is wrapped
+in `{"raw", "source", "sent_at_utc", "run_id"}` so malformed events still reach bronze as text.
+Failed sends are retried after 1, 2, 4, 8 s, then written to `output/dlq/send_failures.jsonl`.
+Every run appends a row to `output/logs/send_log.csv` (read/sent/DLQ counts, retries, events/s).
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install pyyaml azure-eventhub
+echo 'EVENTSTREAM_CONNECTION_STRING=Endpoint=sb://...;EntityPath=...' > .env   # never commit .env
+.venv/bin/python send_stream.py                 # send the sample
+.venv/bin/python send_stream.py --fail-first 6  # retry/backoff + DLQ demo
+```
+
+Then run `ingestion/notebooks/02_check_bronze.py` in Fabric.
+
 ## Where things go
 
 | Thing | Where |
