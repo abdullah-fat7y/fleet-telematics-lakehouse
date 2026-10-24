@@ -272,6 +272,7 @@ Computed on the 1,005-event sample (clean, non-duplicate readings) and the refer
 | 12 | ![](../evidence/person1/12_dlq_examples_and_ingestion_log.png) | Example DLQ rows with exact reasons (`missing_field: rpm`, `wrong_type: odometer_km is not a number`, ...) |
 | 13 | ![](../evidence/person1/13_batch_validated_dlq.png) | Batch rows validated by notebook 04: 249,907 new rows, 3,414 to DLQ |
 | 14 | ![](../evidence/person1/14_ingestion_log_with_batch.png) | Ingestion log with the batch sender run (249,752 lines in 62 files) and the `batch_load` row (249,752 rows into bronze) |
+| 15 | ![](../evidence/person1/15_load_landing_output.png) | Notebook `05_load_landing`: 62 files, 249,752 rows appended as `batch`; bronze by source: stream 733,586, batch 249,752, dlq_replay 155 |
 
 Also in `evidence/person1/`: `config_used.yaml`, `sample_summary.json`, `send_log.csv`
 (first real send: 1,005 events in 3.6 s = 278 events/s, 0 retries, 0 DLQ - measured on a MacBook,
