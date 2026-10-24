@@ -1,0 +1,53 @@
+Notebook 06_bronze_append_only_proof - final run in Fabric (2026-10-24), after 30 events were streamed with the lock on.
+
+bronze_telemetry: 38 files now, 28 commits in the log
+Every commit in the transaction log:
++-------+-----------------+-------------------+-----------+----------+-----------------------------+-----------------------+--------------------+
+|version|operation        |committed_at       |files_added|rows_added|files_rewritten_by_compaction|files_removed_with_data|files_compacted_away|
++-------+-----------------+-------------------+-----------+----------+-----------------------------+-----------------------+--------------------+
+|0      |NULL             |NULL               |0          |NULL      |0                            |0                      |0                   |
+|1      |NULL             |NULL               |2          |NULL      |0                            |0                      |0                   |
+|2      |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|3      |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|4      |NULL             |NULL               |2          |NULL      |0                            |0                      |0                   |
+|5      |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|6      |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|7      |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|8      |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|9      |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|10     |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|11     |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|12     |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|13     |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|14     |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|15     |NULL             |NULL               |3          |NULL      |0                            |0                      |0                   |
+|16     |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|17     |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|18     |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|19     |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|20     |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|21     |NULL             |NULL               |2          |NULL      |0                            |0                      |0                   |
+|22     |WRITE            |2026-10-23 15:16:40|8          |249752    |0                            |0                      |0                   |
+|23     |SET TBLPROPERTIES|2026-10-24 01:11:33|0          |NULL      |0                            |0                      |0                   |
+|24     |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|25     |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|26     |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
+|27     |NULL             |NULL               |1          |NULL      |0                            |0                      |0                   |
++-------+-----------------+-------------------+-----------+----------+-----------------------------+-----------------------+--------------------+
+
+Check 1 - files removed with dataChange = true: 0  ->  PASS
+Check 2 - files added by data commits: 38, still in the table: 38  ->  PASS  (row statistics missing on 30 files, so files are compared instead of row counts)
++----------+------+
+|    source| count|
++----------+------+
+|     batch|249752|
+|dlq_replay|   155|
+|    stream|733616|
++----------+------+
+
+delta.appendOnly = true
+Refused as expected: DELETE FROM bronze_telemetry WHERE 1 = 0
+   -> [DELTA_CANNOT_MODIFY_APPEND_ONLY] This table is configured to only allow appends. If you would like to permit updates or deletes, use 'ALTER TABLE bronze_teleme
+Refused as expected: UPDATE bronze_telemetry SET source = source WHERE 1 = 0
+   -> [DELTA_CANNOT_MODIFY_APPEND_ONLY] This table is configured to only allow appends. If you would like to permit updates or deletes, use 'ALTER TABLE bronze_teleme
+Rows still in table: 983,523

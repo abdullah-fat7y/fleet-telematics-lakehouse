@@ -19,7 +19,7 @@ and records what we noticed in the data that matters for the KPIs.
 | 5. Bad data on purpose (7 types) | Done (sample) | `Files/sample/bad_data_manifest.csv` |
 | Day 1-2 handoff: ~1,000-event sample | Done | `Files/sample/sample_events.jsonl` |
 | 7a. Streaming to Eventstream | Done | `fleet_eventstream` -> `bronze_telemetry` |
-| 8. Bronze table (raw text + arrival time + source) | Done | `bronze_telemetry` |
+| 8. Bronze table (raw text + arrival time + source) | Done; **append-only proven from the Delta log and enforced** (`delta.appendOnly = true`) | `bronze_telemetry`, notebook `06_bronze_append_only_proof` |
 | 10. Retry with backoff (1, 2, 4, 8 s) | Done and demonstrated live | `generator/fleet/stream_sender.py`, `fleet_run.py` |
 | 6. Concurrent workers (5,000 vehicles) | Done: 16 async workers, 5,000 vehicles, 2 simulated h | `generator/run_fleet.py` |
 | 7b. Batch landing (`Files/landing`) | Done: 62 files, 249,752 events loaded into bronze with `source = 'batch'` | `run_fleet.py --mode batch`, `upload_to_onelake.py`, notebook `05_load_landing` |
@@ -66,6 +66,7 @@ Same `seed` => byte-identical output (checked by hashing two runs).
 | `03_check_full_run` | Notebook | Rows, distinct vehicles, arrival lag and partitions for one run |
 | `04_dlq_and_ingestion_log` | Notebook | Validates new bronze rows, builds `dlq_telemetry` and `bronze_ingestion_log`, marks recovered events |
 | `05_load_landing` | Notebook | Batch path: loads new files from `Files/landing` into bronze (`source = 'batch'`), archives them |
+| `06_bronze_append_only_proof` | Notebook | Proves from the Delta transaction log that bronze was never modified, then sets `delta.appendOnly` |
 
 ### 2.2 Why every event is wrapped in an envelope
 
@@ -159,7 +160,7 @@ Bad data is never applied to anomaly readings, so every truth row points at a va
 
 Business key for deduplication: `vehicle_id + event_time`.
 
-### 3.3 `bronze_telemetry` (Delta, append-only, written by the Eventstream)
+### 3.3 `bronze_telemetry` (Delta, append-only and locked with `delta.appendOnly = true`)
 
 | Column | Type | Source | Description |
 |---|---|---|---|
@@ -243,7 +244,7 @@ Computed on the 1,005-event sample (clean, non-duplicate readings) and the refer
 | Topic | Detail |
 |---|---|
 | What runs outside Airflow | The generator/sender and the Eventstream run continuously (work plan Step 3). Airflow does **not** start them. |
-| Input to the DAG | Table `bronze_telemetry`. New-data check: `max(EventEnqueuedUtcTime)` greater than the last processed watermark. |
+| Input to the DAG | Table `bronze_telemetry` (append-only: nothing downstream may delete or update it; Delta refuses it). New-data check: `max(EventEnqueuedUtcTime)` greater than the last processed watermark. |
 | Incremental reads | Person 2 should keep a watermark on `EventEnqueuedUtcTime` (arrival time), not `event_time` (late events would be missed). |
 | Batch path | `upload_to_onelake.py landing --watch` drops files into `Files/landing/` every 30 s. DAG order: notebook `05_load_landing` first, then `04_dlq_and_ingestion_log` (validates both stream and batch rows). |
 | DLQ + ingestion log | Notebook `04_dlq_and_ingestion_log` is the first DAG task ("check for new bronze data" + validation). It is idempotent and incremental (watermark table `ingestion_watermark`). Its row counts feed the pipeline-health page. |
@@ -273,6 +274,9 @@ Computed on the 1,005-event sample (clean, non-duplicate readings) and the refer
 | 13 | ![](../evidence/person1/13_batch_validated_dlq.png) | Batch rows validated by notebook 04: 249,907 new rows, 3,414 to DLQ |
 | 14 | ![](../evidence/person1/14_ingestion_log_with_batch.png) | Ingestion log with the batch sender run (249,752 lines in 62 files) and the `batch_load` row (249,752 rows into bronze) |
 | 15 | ![](../evidence/person1/15_load_landing_output.png) | Notebook `05_load_landing`: 62 files, 249,752 rows appended as `batch`; bronze by source: stream 733,586, batch 249,752, dlq_replay 155 |
+| 16 | ![](../evidence/person1/16_append_only_notebook_code.png) | Notebook `06_bronze_append_only_proof` reads the Delta transaction log |
+| 17 | ![](../evidence/person1/17_append_only_commit_log.png) | Every commit of bronze: only files added, nothing removed (Eventstream commits have no operation name) |
+| 18 | ![](../evidence/person1/18_append_only_checks_and_lock.png) | Check 1 PASS, lock set, DELETE and UPDATE refused, 983,493 rows intact (final run with Check 2 PASS: `evidence/person1/append_only/notebook06_final_output.txt`) |
 
 Also in `evidence/person1/`: `config_used.yaml`, `sample_summary.json`, `send_log.csv`
 (first real send: 1,005 events in 3.6 s = 278 events/s, 0 retries, 0 DLQ - measured on a MacBook,
@@ -388,18 +392,34 @@ seamlessly. The 20 retry-demo vehicles also sent 08:00-08:15 by stream, so those
 The `ops` upload (`python upload_to_onelake.py ops`) also replaces the manual upload of the DLQ file and
 sender logs to `Files/ops` from section 8.
 
-## 10. Open items and next steps
+## 10. Bronze is append-only (proof and enforcement)
 
-1. **Append-only proof.** `DESCRIBE HISTORY bronze_telemetry` shows `operation = NULL` because the
-   Eventstream writer does not set an operation name. Next: show `operationMetrics` for each version
-   (only `numOutputRows` / added files, no removed rows) and confirm no `DELETE`/`UPDATE`/`MERGE`.
-2. **Team decision**: whether to also stream a full 24 h day (~4M events, ~33 min). The 2 h run already covers all 5,000 vehicles.
-3. **Fabric trial ends in ~13 days (banner on 2026-10-24).** When it ends the workspace is deleted. Keep all code in GitHub (done), export evidence regularly, and agree with the workspace owner on a plan (another member's trial or a paid capacity) before then.
-4. **Team decision** on the > 90 km/h noise (section 4, point 4).
+`DESCRIBE HISTORY` cannot prove it: the Eventstream writer leaves `operation` empty (NULL). So notebook
+`06_bronze_append_only_proof` reads the Delta **transaction log** (`_delta_log/*.json`), which records every
+file added or removed by every commit, whoever wrote it.
+
+| Check | Rule | Result (final run, 28 commits) |
+|---|---|---|
+| 1. No commit removed data | no `remove` action with `dataChange = true` (delete, update or overwrite would create one; compaction would not) | **0 -> PASS** |
+| 2. Everything written is still there | rows added = rows now; the Eventstream writes no row statistics, so the notebook compares files instead: every file ever added is still part of the table | **38 of 38 files -> PASS** |
+| Enforcement | `ALTER TABLE bronze_telemetry SET TBLPROPERTIES ('delta.appendOnly' = 'true')` | `DELETE ... WHERE 1 = 0` and `UPDATE ... WHERE 1 = 0` **refused** with `DELTA_CANNOT_MODIFY_APPEND_ONLY` |
+| Writers still work | 30 events streamed after the lock (`full-20261024T011408Z`) | commits 24-27 after the lock; `stream` 733,586 -> 733,616; total **983,523 rows** |
+
+The checks were also tested locally against a table where rows had been deleted: both checks fail there
+(Check 1 counts the removed files, Check 2 finds files no longer in the table), so the proof can actually fail.
+To lift the lock if ever needed: `ALTER TABLE bronze_telemetry UNSET TBLPROPERTIES ('delta.appendOnly')`.
+
+## 11. Open items and next steps
+
+All Person 1 steps of the work plan are done. Remaining items are team decisions and housekeeping:
+
+1. **Team decision**: whether to also stream a full 24 h day (~4M events, ~33 min). The 2 h run already covers all 5,000 vehicles.
+2. **Fabric trial ends in ~13 days (banner on 2026-10-24).** When it ends the workspace is deleted. Keep all code in GitHub (done), export evidence regularly, and agree with the workspace owner on a plan (another member's trial or a paid capacity) before then.
+3. **Team decision** on the > 90 km/h noise (section 4, point 4).
 
 ---
 
-## 11. Decisions and limitations
+## 12. Decisions and limitations
 
 - Readings exist only while a vehicle is on a trip (telematics reports with ignition on).
 - Each vehicle has its own random stream (`seed + vehicle_id`), so output does not depend on how vehicles are split across workers.
