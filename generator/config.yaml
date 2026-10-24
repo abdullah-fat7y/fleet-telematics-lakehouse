@@ -105,9 +105,13 @@ sample:
 streaming:
   batch_max_events: 200        # events per send call (well under the 1 MB batch limit)
   retry_delays_s: [1, 2, 4, 8] # wait this long before each retry; after the last one -> DLQ
+  workers: 16                  # concurrent async workers for the full run; a vehicle always stays on one worker
+  log_interval_s: 10           # one ingestion-log row per interval during the full run
 
 output:
   reference_dir: "output/Files/reference"
   sample_dir: "output/Files/sample"
   send_dlq_file: "output/dlq/send_failures.jsonl"
   send_log_file: "output/logs/send_log.csv"
+  interval_log_file: "output/logs/ingestion_intervals.csv"
+  runs_dir: "output/runs"      # per-run truth table, bad-data manifest and performance record

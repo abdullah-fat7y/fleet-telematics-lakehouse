@@ -62,6 +62,25 @@ echo 'EVENTSTREAM_CONNECTION_STRING=Endpoint=sb://...;EntityPath=...' > .env   #
 
 Then run `ingestion/notebooks/02_check_bronze.py` in Fabric.
 
+## Full fleet run (all 5,000 vehicles)
+
+`run_fleet.py` generates every vehicle's readings and streams them as they are created.
+16 async workers (config `streaming.workers`); vehicles are split round-robin and a vehicle always
+stays on one worker and one Eventstream partition, so its readings stay in time order.
+Anomaly and bad-data rates come from `config.yaml` (no forcing, unlike the sample).
+
+```bash
+.venv/bin/python run_fleet.py --vehicles 50 --hours 0.25   # smoke test
+.venv/bin/python run_fleet.py --hours 2                    # all vehicles, 2 simulated hours (~700k events)
+.venv/bin/python run_fleet.py                              # full 24 h (~4M events)
+.venv/bin/python run_fleet.py --dry-run --hours 2          # generator speed only, nothing sent
+```
+
+Per run, `output/runs/<run_id>/` gets `telemetry_truth.csv`, `bad_data_manifest.csv` and `perf.json`
+(measured events/s, machine). `output/logs/ingestion_intervals.csv` gets one row per 10 s
+(received, written, rejected, active vehicles) for `bronze_ingestion_log`.
+Check the run in Fabric with `ingestion/notebooks/03_check_full_run.py`.
+
 ## Where things go
 
 | Thing | Where |

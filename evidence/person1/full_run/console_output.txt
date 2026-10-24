@@ -1,0 +1,67 @@
+run full-20261023T141747Z: 5000 vehicles, 2.0 simulated h, 16 workers
+Eventstream partitions: 4
+     22,981 generated     15,800 sent  0 DLQ  1,580 ev/s  1129 vehicles
+     48,563 generated     40,800 sent  0 DLQ  2,500 ev/s  1633 vehicles
+     74,446 generated     66,400 sent  0 DLQ  2,560 ev/s  2023 vehicles
+     99,844 generated     92,400 sent  0 DLQ  2,600 ev/s  2332 vehicles
+    123,359 generated    116,400 sent  0 DLQ  2,400 ev/s  2169 vehicles
+    150,091 generated    142,800 sent  0 DLQ  2,640 ev/s  2404 vehicles
+    156,860 generated    150,600 sent  0 DLQ  219 ev/s  2317 vehicles
+    185,383 generated    179,200 sent  0 DLQ  2,854 ev/s  3007 vehicles
+    211,437 generated    205,000 sent  0 DLQ  2,580 ev/s  2958 vehicles
+    237,266 generated    231,000 sent  0 DLQ  2,600 ev/s  3166 vehicles
+    263,899 generated    257,400 sent  0 DLQ  2,640 ev/s  3336 vehicles
+    271,498 generated    266,200 sent  0 DLQ  311 ev/s  3198 vehicles
+    301,505 generated    295,800 sent  0 DLQ  2,960 ev/s  3953 vehicles
+    328,080 generated    322,200 sent  0 DLQ  2,640 ev/s  4086 vehicles
+    352,726 generated    347,000 sent  0 DLQ  2,480 ev/s  4217 vehicles
+    377,135 generated    372,200 sent  0 DLQ  2,520 ev/s  4343 vehicles
+    401,286 generated    395,800 sent  0 DLQ  2,360 ev/s  4443 vehicles
+    424,921 generated    420,600 sent  0 DLQ  2,479 ev/s  4523 vehicles
+    449,229 generated    444,200 sent  0 DLQ  2,360 ev/s  4602 vehicles
+    473,692 generated    469,890 sent  0 DLQ  2,569 ev/s  4651 vehicles
+    495,214 generated    491,290 sent  0 DLQ  2,140 ev/s  4410 vehicles
+    520,550 generated    516,890 sent  0 DLQ  2,559 ev/s  4428 vehicles
+    544,119 generated    539,890 sent  0 DLQ  2,300 ev/s  4401 vehicles
+    567,026 generated    563,690 sent  0 DLQ  2,380 ev/s  4363 vehicles
+    590,017 generated    587,615 sent  0 DLQ  2,392 ev/s  4337 vehicles
+    614,350 generated    612,510 sent  0 DLQ  2,486 ev/s  4034 vehicles
+    637,398 generated    635,603 sent  0 DLQ  2,309 ev/s  3726 vehicles
+    662,924 generated    661,743 sent  0 DLQ  2,614 ev/s  3684 vehicles
+    685,937 generated    685,973 sent  0 DLQ  2,423 ev/s  3197 vehicles
+    703,986 generated    707,911 sent  0 DLQ  2,194 ev/s  2856 vehicles
+    721,978 generated    727,072 sent  0 DLQ  1,916 ev/s  1400 vehicles
+{
+  "run_id": "full-20261023T141747Z",
+  "measured": true,
+  "dry_run": false,
+  "vehicles": 5000,
+  "simulated_hours": 2.0,
+  "workers": 16,
+  "events_generated": 724887,
+  "events_sent": 732019,
+  "events_dlq": 0,
+  "retries": 0,
+  "duration_s": 361.3,
+  "events_per_s": 2026.1,
+  "anomaly_episodes": {
+    "cold_chain_breach": 48,
+    "excessive_idling": 96,
+    "route_deviation": 59
+  },
+  "bad_data_events": {
+    "duplicate": 7132,
+    "impossible_value": 1459,
+    "late_event": 2180,
+    "malformed_json": 2282,
+    "missing_field": 2773,
+    "null_required": 2841,
+    "wrong_type": 2145
+  },
+  "machine": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "processor": "arm",
+    "cpu_count": 10,
+    "python": "3.13.13"
+  }
+}
