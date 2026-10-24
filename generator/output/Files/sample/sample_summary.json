@@ -1,0 +1,37 @@
+{
+  "seed": 42,
+  "vehicles": 20,
+  "refrigerated_vehicles": 6,
+  "clean_readings_generated": 1000,
+  "lines_in_file": 1005,
+  "anomaly_episodes": {
+    "cold_chain_breach": 2,
+    "excessive_idling": 2,
+    "route_deviation": 2
+  },
+  "anomaly_readings": 90,
+  "bad_data_events": {
+    "malformed_json": 5,
+    "missing_field": 5,
+    "wrong_type": 5,
+    "null_required": 5,
+    "duplicate": 5,
+    "impossible_value": 5,
+    "late_event": 5
+  },
+  "extra_lines_from_duplicates": 5,
+  "fields": [
+    "event_id",
+    "vehicle_id",
+    "trip_id",
+    "event_time",
+    "latitude",
+    "longitude",
+    "speed_kmh",
+    "rpm",
+    "engine_temp_c",
+    "fuel_rate_lph",
+    "odometer_km",
+    "cargo_temp_c"
+  ]
+}

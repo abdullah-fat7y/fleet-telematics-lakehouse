@@ -1,0 +1,36 @@
+event_id,bad_type,detail
+410abd25-f406-42b3-86a4-f3fb82fafd5b,missing_field,removed speed_kmh
+9ee148cf-e869-47cd-adf9-397d7db8852c,wrong_type,longitude sent as text
+ca547c01-0c6a-492e-9e31-eb4fbc7b284f,null_required,trip_id is null
+26552b8d-b487-4a54-b78a-4c7c4e47af97,wrong_type,fuel_rate_lph sent as text
+b4fbb45c-e8c9-4bc9-a313-c96db5b4b1a1,null_required,trip_id is null
+fe4b3938-e476-4d08-9f77-a7dfe63bca96,malformed_json,truncated JSON
+48350197-f4da-4a7e-9afe-e6bb775dbb68,duplicate,same event sent twice
+a39caad7-02ef-4e51-8e29-c612419b663a,duplicate,same event sent twice
+f7646ad6-8b0c-4e9b-bac9-d72d1e429973,null_required,vehicle_id is null
+9d1fa2cf-7a35-4200-a9ed-6b5f5546ed39,duplicate,same event sent twice
+746e2bff-f509-4d61-9c4c-83d67a68ced7,malformed_json,truncated JSON
+947129c8-1c77-457f-a535-284b8af0cfc9,wrong_type,latitude sent as text
+8bcdbaff-5146-433b-88b8-a7d67c193f61,null_required,fuel_rate_lph is null
+c33eacc1-c06d-4574-b1e4-b3564d4d3b6b,malformed_json,truncated JSON
+343b0404-7bad-408c-b348-e4d11342e7a3,impossible_value,engine_temp_c=900.0
+0e026bb4-5d68-41fb-9328-bf94800fe0e3,impossible_value,latitude=123.4
+0dc70505-0663-459f-a54a-56cd99f23010,late_event,delivered late
+82004e3a-c64f-49e3-905e-bee7dcb9ac6d,missing_field,removed event_id
+b43751d1-cc5c-4c59-a5bd-0c0c36e60f61,duplicate,same event sent twice
+c4806cd9-7e16-4e5b-b922-180d6f43cbed,late_event,delivered late
+512d599f-98dc-4f60-a8b3-f78e61188349,wrong_type,longitude sent as text
+176a6f16-d5ea-426e-b67d-540b82a822b5,wrong_type,odometer_km sent as text
+d80f06b5-0d3c-4325-9f66-c55443e1398a,null_required,event_time is null
+590ea90a-7c15-46da-b4fa-254a2e9da541,late_event,delivered late
+254a7321-a2ba-46d1-b74b-9129663a0f32,missing_field,removed longitude
+44ab2743-f64c-444c-9fbe-67138227718c,late_event,delivered late
+1ef4207f-24ab-4063-82ac-983d7156982a,impossible_value,latitude=123.4
+0e82fde8-b88e-48c3-9ed1-3482fe959d8d,impossible_value,fuel_rate_lph=-5.0
+d151eb67-1462-41ac-abde-d2ea848d29aa,missing_field,removed engine_temp_c
+5ea8931b-ec35-47d3-90cb-08e5311cb823,missing_field,removed engine_temp_c
+ba1bddd3-a5e2-42b4-9978-3166e206747a,malformed_json,truncated JSON
+e587b007-05b1-4611-adab-f73ce5dab185,impossible_value,fuel_rate_lph=-5.0
+6c5d40db-4010-4804-a8dc-513c375cedc2,duplicate,same event sent twice
+60dafd02-3499-4008-9629-d71d54ef0722,late_event,delivered late
+10cfbb61-a410-4c78-af07-31cf083d6010,malformed_json,truncated JSON
