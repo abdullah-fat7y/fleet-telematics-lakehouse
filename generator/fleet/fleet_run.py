@@ -130,9 +130,10 @@ class Run:
 
 
 class Worker:
-    def __init__(self, run, ref, vehicles, end_time, client, partitions):
+    def __init__(self, run, ref, vehicles, start_time, end_time, client, partitions):
         self.run, self.cfg, self.ref = run, run.cfg, ref
         self.vehicles, self.end_time = vehicles, end_time
+        self.window_start = fmt_utc(start_time)  # readings before this are simulated (for state) but not sent
         self.client, self.partitions = client, partitions
         self.buffers = {}
 
@@ -157,8 +158,10 @@ class Worker:
             except Exception as exc:  # treated as temporary until the retries run out
                 if attempt == len(delays):
                     self.run.dead_letter(envelopes, f"{type(exc).__name__}: {exc}", attempt)
+                    print(f"  gave up after {attempt} retries -> {len(envelopes)} events to DLQ")
                     return
                 self.run.retries += 1
+                print(f"  send failed ({exc}); retry {attempt + 1}/{len(delays)} in {delays[attempt]}s")
                 await asyncio.sleep(delays[attempt])
 
     async def _add(self, vehicle_id, raw):
@@ -176,6 +179,8 @@ class Worker:
         late = []  # (due_time, vehicle_id, raw) held back and released later
         n = 0
         for event_time, vehicle_id, event, tag in heapq.merge(*streams, key=lambda x: (x[0], x[1])):
+            if event_time < self.window_start:
+                continue
             self.run.generated += 1
             self.run.active_in_interval.add(vehicle_id)
             while late and late[0][0] <= event_time:
@@ -210,14 +215,15 @@ class Worker:
 
 
 async def run_fleet(cfg, base_dir, connection_string, hours=None, max_vehicles=None, workers=None,
-                    fail_first=0, dry_run=False):
+                    fail_first=0, dry_run=False, from_hours=0.0):
     ref = load_reference(os.path.join(base_dir, cfg["output"]["reference_dir"]))
     vehicles = sorted(ref["vehicles"].values(), key=lambda v: v["vehicle_id"])[:max_vehicles]
     hours = hours or cfg["simulation"]["hours"]
     workers = workers or cfg["streaming"]["workers"]
-    end_time = parse_utc(cfg["simulation"]["start_time_utc"]) + timedelta(hours=hours)
+    sim_start = parse_utc(cfg["simulation"]["start_time_utc"])
+    start_time, end_time = sim_start + timedelta(hours=from_hours), sim_start + timedelta(hours=hours)
     run = Run(cfg, base_dir, len(vehicles), hours, workers, fail_first, dry_run)
-    print(f"run {run.run_id}: {len(vehicles)} vehicles, {hours} simulated h, {workers} workers"
+    print(f"run {run.run_id}: {len(vehicles)} vehicles, simulated h {from_hours}-{hours}, {workers} workers"
           f"{' (dry run)' if dry_run else ''}")
 
     clients, partitions = [], None
@@ -228,7 +234,7 @@ async def run_fleet(cfg, base_dir, connection_string, hours=None, max_vehicles=N
         partitions = await clients[0].get_partition_ids()
         print(f"Eventstream partitions: {len(partitions)}")
 
-    pool = [Worker(run, ref, vehicles[i::workers], end_time, clients[i] if clients else None, partitions)
+    pool = [Worker(run, ref, vehicles[i::workers], start_time, end_time, clients[i] if clients else None, partitions)
             for i in range(workers)]
     logger = asyncio.create_task(run.interval_logger())
     try:

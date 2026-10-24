@@ -81,6 +81,18 @@ Per run, `output/runs/<run_id>/` gets `telemetry_truth.csv`, `bad_data_manifest.
 (received, written, rejected, active vehicles) for `bronze_ingestion_log`.
 Check the run in Fabric with `ingestion/notebooks/03_check_full_run.py`.
 
+## Dead-letter queue, ingestion log and recovery
+
+```bash
+.venv/bin/python run_fleet.py --vehicles 20 --from-hours 2 --hours 2.25 --workers 1 --fail-first 6   # retry demo
+.venv/bin/python replay_dlq.py                                                                       # recovery
+```
+
+Upload `output/dlq/send_failures.jsonl`, `output/logs/send_log.csv` and `output/logs/ingestion_intervals.csv`
+to the Lakehouse folder `Files/ops`, then run `ingestion/notebooks/04_dlq_and_ingestion_log.py` in Fabric.
+It builds `dlq_telemetry` (send and validation failures, with reasons) and `bronze_ingestion_log`,
+and marks DLQ rows as recovered once their replayed copy is in bronze.
+
 ## Where things go
 
 | Thing | Where |
