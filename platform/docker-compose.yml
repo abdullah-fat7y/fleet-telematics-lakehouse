@@ -2,7 +2,7 @@
 #
 #   docker compose up -d --build            start everything
 #   ./connect/register.sh                   register the CDC connector (once)
-#   open http://localhost:8080              Kafka UI (topics, messages, consumer lag)
+#   open http://localhost:8085              Kafka UI (topics, messages, consumer lag)
 #
 # Local development credentials only; nothing here is exposed outside this machine.
 # The bridge reads EVENTSTREAM_V2_CONNECTION_STRING from ../generator/.env (git-ignored).
@@ -95,7 +95,7 @@ services:
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
       KAFKA_CLUSTERS_0_KAFKACONNECT_0_NAME: debezium
       KAFKA_CLUSTERS_0_KAFKACONNECT_0_ADDRESS: http://connect:8083
-    ports: ["8080:8080"]
+    ports: ["8085:8080"]          # 8080 is often taken locally
 
 volumes:
   pgdata:

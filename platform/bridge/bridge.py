@@ -74,11 +74,16 @@ class Bridge:
         """Sends (key, value) pairs; returns the ones that failed after all retries."""
         pending = items
         for attempt in range(len(RETRY_DELAYS_S) + 1):
-            failed = []
-            for key, value in pending:
+            outcome = {}  # position -> None (acknowledged) or error text
+
+            for i, (key, value) in enumerate(pending):
                 self.producer.produce(self.cloud_topic, value=value, key=key,
-                                      on_delivery=lambda err, _m, kv=(key, value): err and failed.append((kv, str(err))))
+                                      on_delivery=lambda err, _m, i=i: outcome.__setitem__(i, err and str(err)))
             self.producer.flush(120)
+            # Anything the cloud did not explicitly acknowledge (e.g. the flush timed out) counts as failed,
+            # so its Kafka offset is never committed for a message that did not arrive.
+            failed = [(kv, outcome.get(i, "no acknowledgement before timeout"))
+                      for i, kv in enumerate(pending) if outcome.get(i, "missing") is not None]
             if not failed:
                 return []
             if attempt == len(RETRY_DELAYS_S):
@@ -90,11 +95,15 @@ class Bridge:
             pending = [kv for kv, _ in failed]
 
     def lag(self):
+        """Messages in Kafka not yet delivered: log end minus the committed offset (the position is
+        unknown right after a restart, the committed offset is not)."""
+        assigned = self.consumer.assignment()
+        if not assigned:
+            return None
         total = 0
-        for tp in self.consumer.assignment():
-            _, high = self.consumer.get_watermark_offsets(tp, timeout=5)
-            position = self.consumer.position([tp])[0].offset
-            total += max(0, high - position) if position >= 0 else high
+        for tp in self.consumer.committed(assigned, timeout=5):
+            low, high = self.consumer.get_watermark_offsets(tp, timeout=5)
+            total += high - (tp.offset if tp.offset >= 0 else low)
         return total
 
     def run(self):
@@ -125,7 +134,7 @@ class Bridge:
                            round(delivered / elapsed, 1), self.lag()]
                     w.writerow(row)
                     f.flush()
-                    print(f"delivered {self.stats['delivered']:,} total, {row[5]:,} ev/s, kafka lag {row[6]:,}", flush=True)
+                    print(f"delivered {self.stats['delivered']:,} total, {row[5]:,} ev/s, kafka lag {row[6]}", flush=True)
                     last_log, last = time.time(), dict(self.stats)
         self.consumer.close()
         print("bridge stopped:", self.stats, flush=True)
