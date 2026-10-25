@@ -624,7 +624,7 @@ The notebook assigns `anomaly_type` using conditional expressions in this order:
 
 1. `cold_chain_breach`
 2. `excessive_idling`
-3. `gps_teleportation`
+3. `route_deviation`
 4. `engine_overheating`
 5. `rpm_spike`
 
