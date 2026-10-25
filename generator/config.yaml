@@ -123,7 +123,8 @@ onelake:
 # Ingestion API in front of the source database (docker compose stack in /platform).
 api:
   url: "http://localhost:8000"
-  batch_events: 100            # raw lines per POST
+  batch_events: 100            # raw lines per POST on the live feed
+  batch_events_history: 2000   # bulk uploads (channel=history) send bigger requests
 
 output:
   reference_dir: "output/Files/reference"

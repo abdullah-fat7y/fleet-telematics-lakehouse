@@ -20,6 +20,8 @@ CREATE TABLE telemetry_live (
     received_at    TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
 );
 
+-- LIKE ... INCLUDING ALL copies the id default, so both tables draw ids from the same sequence:
+-- db_id is unique across live and history, which makes it a safe key in the cloud.
 CREATE TABLE telemetry_history (LIKE telemetry_live INCLUDING ALL);
 CREATE INDEX telemetry_history_slice_hour ON telemetry_history (slice_hour);
 
@@ -40,6 +42,20 @@ CREATE TABLE api_ingest_log (
     rejected       INT         NOT NULL,
     duration_ms    DOUBLE PRECISION NOT NULL,
     received_at    TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp()
+);
+
+-- One row per hour slice the batch extractor exported (started -> done).
+CREATE TABLE extract_log (
+    extract_id     TEXT        NOT NULL,
+    slice_hour     TIMESTAMPTZ NOT NULL,
+    mode           TEXT        NOT NULL,              -- initial / incremental / rerun / backfill
+    status         TEXT        NOT NULL,              -- started / done
+    rows           INT,
+    rejected       INT,
+    file           TEXT,
+    started_at     TIMESTAMPTZ NOT NULL DEFAULT clock_timestamp(),
+    finished_at    TIMESTAMPTZ,
+    PRIMARY KEY (extract_id, slice_hour)
 );
 
 -- Insert-only source tables: the API role may insert and read, never update or delete.
