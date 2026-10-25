@@ -10,6 +10,7 @@
 import asyncio
 import csv
 import heapq
+import itertools
 import json
 import os
 import platform
@@ -45,13 +46,39 @@ def vehicle_stream(cfg, ref, vehicle, end_time):
             yield event["event_time"], event["vehicle_id"], event, tag
 
 
+class Pacer:
+    """Token bucket shared by all workers: holds the overall send rate at `rate` events/s,
+    so a run behaves like a steady live feed instead of one burst."""
+
+    def __init__(self, rate):
+        self.rate, self.tokens, self.last = rate, 0.0, time.monotonic()
+        self.lock = asyncio.Lock()
+
+    async def acquire(self, n):
+        async with self.lock:
+            while True:
+                now = time.monotonic()
+                self.tokens = min(max(self.rate, n), self.tokens + (now - self.last) * self.rate)
+                self.last = now
+                if self.tokens >= n:
+                    self.tokens -= n
+                    return
+                await asyncio.sleep((n - self.tokens) / self.rate)
+
+
 class Run:
     """Shared counters, outputs and logs for one full run."""
 
-    def __init__(self, cfg, base_dir, n_vehicles, hours, workers, fail_first, dry_run, mode="stream"):
+    def __init__(self, cfg, base_dir, n_vehicles, hours, workers, fail_first, dry_run, mode="stream",
+                 channel=None, rate=None, minutes=None):
         self.cfg, self.base_dir = cfg, base_dir
-        self.mode = mode  # "stream" (Eventstream) or "batch" (files for Files/landing)
-        self.run_id = datetime.now(timezone.utc).strftime(f"{'batch' if mode == 'batch' else 'full'}-%Y%m%dT%H%M%SZ")
+        # "stream" (Eventstream), "batch" (files for Files/landing) or "api" (ingestion API, channel live/history)
+        self.mode, self.channel = mode, channel
+        prefix = {"batch": "batch", "api": f"api-{channel}"}.get(mode, "full")
+        self.run_id = datetime.now(timezone.utc).strftime(f"{prefix}-%Y%m%dT%H%M%SZ")
+        self.pacer = Pacer(rate) if rate else None
+        self.rate, self.minutes = rate, minutes
+        self.deadline = None
         self.n_vehicles, self.hours, self.workers, self.dry_run = n_vehicles, hours, workers, dry_run
         self.landing_dir = os.path.join(base_dir, cfg["output"]["landing_dir"], self.run_id)
         self.files_written = 0
@@ -65,6 +92,13 @@ class Run:
         self.dlq_path = os.path.join(base_dir, out["send_dlq_file"])
         self.interval_path = os.path.join(base_dir, out["interval_log_file"])
         self.send_log_path = os.path.join(base_dir, out["send_log_file"])
+
+    def start_clock(self):
+        """Called after the fast-forward: duration, rate and the wall-clock limit count from here."""
+        self.started = time.time()
+        self.deadline = self.started + self.minutes * 60 if self.minutes else None
+        if self.pacer:
+            self.pacer.last = time.monotonic()
 
     def dead_letter(self, envelopes, reason, retries):
         os.makedirs(os.path.dirname(self.dlq_path), exist_ok=True)
@@ -105,7 +139,8 @@ class Run:
         write_csv(os.path.join(self.run_dir, "bad_data_manifest.csv"), self.manifest,
                   ["event_id", "bad_type", "detail"])
         perf = {
-            "run_id": self.run_id, "mode": self.mode, "measured": True, "dry_run": self.dry_run,
+            "run_id": self.run_id, "mode": self.mode, "channel": self.channel, "measured": True,
+            "dry_run": self.dry_run, "target_rate_eps": self.rate, "wall_clock_limit_min": self.minutes,
             "files_written": self.files_written if self.mode == "batch" else None,
             "vehicles": self.n_vehicles, "simulated_hours": self.hours, "workers": self.workers,
             "events_generated": self.generated, "events_sent": self.sent, "events_dlq": self.dlq,
@@ -127,7 +162,7 @@ class Run:
             if new:
                 w.writerow(["run_id", "source", "started_utc", "duration_s", "events_read", "events_sent",
                             "events_dlq", "retries", "events_per_s", "dry_run"])
-            w.writerow([self.run_id, self.mode, datetime.fromtimestamp(self.started, timezone.utc).isoformat(),
+            w.writerow([self.run_id, self.channel or self.mode, datetime.fromtimestamp(self.started, timezone.utc).isoformat(),
                         perf["duration_s"], self.generated, self.sent, self.dlq, self.retries,
                         perf["events_per_s"], self.dry_run])
         return perf
@@ -141,8 +176,8 @@ class Worker:
         self.client, self.partitions = client, partitions
         self.index, self.files = index, 0
         self.buffers = {}
-        self.flush_at = (self.cfg["batch"]["file_max_events"] if run.mode == "batch"
-                         else self.cfg["streaming"]["batch_max_events"])
+        self.flush_at = {"batch": self.cfg["batch"]["file_max_events"],
+                         "api": self.cfg["api"]["batch_events"]}.get(run.mode, self.cfg["streaming"]["batch_max_events"])
 
     def _write_file(self, envelopes):
         """Batch mode: one JSON-lines file of raw events, written to .tmp first so an uploader
@@ -161,6 +196,8 @@ class Worker:
 
     async def _send(self, partition, envelopes):
         delays = self.cfg["streaming"]["retry_delays_s"]
+        if self.run.pacer:
+            await self.run.pacer.acquire(len(envelopes))
         for attempt in range(len(delays) + 1):
             try:
                 if self.run.fail_remaining > 0:
@@ -168,6 +205,15 @@ class Worker:
                     raise ConnectionError("simulated transient failure")
                 if self.run.mode == "batch" and not self.run.dry_run:
                     self._write_file(envelopes)
+                elif self.run.mode == "api" and self.client is not None:
+                    # One POST per batch: the raw lines exactly as generated (malformed ones included).
+                    resp = await self.client.post(
+                        "/v1/telemetry", params={"channel": self.run.channel},
+                        content="\n".join(env["raw"] for env in envelopes).encode(),
+                        headers={"Content-Type": "application/x-ndjson", "X-Run-Id": self.run.run_id,
+                                 "X-Sent-At": now_utc()})
+                    if resp.status_code >= 300:
+                        raise ConnectionError(f"API returned {resp.status_code}: {resp.text[:200]}")
                 elif self.client is not None:
                     from azure.eventhub import EventData
                     batch = await self.client.create_batch(partition_id=partition)
@@ -188,20 +234,26 @@ class Worker:
     async def _add(self, vehicle_id, raw):
         partition = self._partition(vehicle_id)
         buf = self.buffers.setdefault(partition, [])
-        buf.append({"raw": raw, "source": self.run.mode, "sent_at_utc": now_utc(), "run_id": self.run.run_id})
+        buf.append({"raw": raw, "source": self.run.channel or self.run.mode, "sent_at_utc": now_utc(), "run_id": self.run.run_id})
         if len(buf) >= self.flush_at:
             self.buffers[partition] = []
             await self._send(partition, buf)
 
-    async def run_all(self):
+    def prepare(self):
+        """Simulate everything before the window (vehicle state only, nothing is sent) and stop at the
+        first reading inside it, so the wall-clock limit and the pacing only cover the real run."""
         streams = [vehicle_stream(self.cfg, self.ref, v, self.end_time) for v in self.vehicles]
+        self.merged = heapq.merge(*streams, key=lambda x: (x[0], x[1]))
+        self.first = next((item for item in self.merged if item[0] >= self.window_start), None)
+
+    async def run_all(self):
         bad_rngs = {v["vehicle_id"]: rng_for(self.cfg["seed"], "bad", v["vehicle_id"]) for v in self.vehicles}
         delay = timedelta(hours=self.cfg["bad_data"]["late_event_delay_hours"])
         late = []  # (due_time, vehicle_id, raw) held back and released later
         n = 0
-        for event_time, vehicle_id, event, tag in heapq.merge(*streams, key=lambda x: (x[0], x[1])):
-            if event_time < self.window_start:
-                continue
+        for event_time, vehicle_id, event, tag in itertools.chain([self.first] if self.first else [], self.merged):
+            if self.run.deadline and time.time() >= self.run.deadline:
+                break  # wall-clock limit reached: stop generating, then flush what is buffered
             self.run.generated += 1
             self.run.active_in_interval.add(vehicle_id)
             while late and late[0][0] <= event_time:
@@ -236,18 +288,25 @@ class Worker:
 
 
 async def run_fleet(cfg, base_dir, connection_string, hours=None, max_vehicles=None, workers=None,
-                    fail_first=0, dry_run=False, from_hours=0.0, mode="stream"):
+                    fail_first=0, dry_run=False, from_hours=0.0, mode="stream", channel=None, rate=None,
+                    minutes=None):
     ref = load_reference(os.path.join(base_dir, cfg["output"]["reference_dir"]))
     vehicles = sorted(ref["vehicles"].values(), key=lambda v: v["vehicle_id"])[:max_vehicles]
     hours = hours or cfg["simulation"]["hours"]
     workers = workers or cfg["streaming"]["workers"]
     sim_start = parse_utc(cfg["simulation"]["start_time_utc"])
     start_time, end_time = sim_start + timedelta(hours=from_hours), sim_start + timedelta(hours=hours)
-    run = Run(cfg, base_dir, len(vehicles), hours, workers, fail_first, dry_run, mode)
+    run = Run(cfg, base_dir, len(vehicles), hours, workers, fail_first, dry_run, mode, channel, rate, minutes)
     print(f"{mode} run {run.run_id}: {len(vehicles)} vehicles, simulated h {from_hours}-{hours}, {workers} workers"
+          f"{f', paced at {rate} events/s' if rate else ''}{f', stops after {minutes} min' if minutes else ''}"
           f"{' (dry run)' if dry_run else ''}")
+    if from_hours >= 24:
+        print(f"  fast-forwarding {from_hours:.0f} simulated hours first so every vehicle starts in its real state")
 
     clients, partitions = [], None
+    if mode == "api" and not dry_run:
+        import httpx
+        clients = [httpx.AsyncClient(base_url=cfg["api"]["url"], timeout=60) for _ in range(workers)]
     if mode == "stream" and not dry_run:
         from azure.eventhub.aio import EventHubProducerClient
         clients = [EventHubProducerClient.from_connection_string(connection_string, retry_total=0)
@@ -257,13 +316,16 @@ async def run_fleet(cfg, base_dir, connection_string, hours=None, max_vehicles=N
 
     pool = [Worker(run, ref, vehicles[i::workers], start_time, end_time, clients[i] if clients else None, partitions, i)
             for i in range(workers)]
+    for w in pool:
+        w.prepare()
+    run.start_clock()
     logger = asyncio.create_task(run.interval_logger())
     try:
         await asyncio.gather(*(w.run_all() for w in pool))
     finally:
         logger.cancel()
         for c in clients:
-            await c.close()
+            await (c.aclose() if mode == "api" else c.close())
     perf = run.finish()
     if mode == "batch" and not dry_run:
         print(f"wrote {run.files_written} files to {run.landing_dir}")

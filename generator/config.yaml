@@ -6,6 +6,7 @@ seed: 42
 simulation:
   start_time_utc: "2026-11-01T06:00:00Z"
   hours: 24                    # how many hours to simulate in a full run
+  days: 4                      # days of trips in the reference data: day 1 = pilot, 2-3 = batch, 4 = streaming
   reading_interval_s: 30       # one reading per vehicle every 30 seconds (team proposal)
 
 fleet:
@@ -118,6 +119,11 @@ onelake:
   account_url: "https://onelake.dfs.fabric.microsoft.com"
   workspace: "Fleet_Telematics_Project"
   lakehouse: "fleet_lakehouse"
+
+# Ingestion API in front of the source database (docker compose stack in /platform).
+api:
+  url: "http://localhost:8000"
+  batch_events: 100            # raw lines per POST
 
 output:
   reference_dir: "output/Files/reference"
