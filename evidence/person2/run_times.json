@@ -6,21 +6,22 @@
     {
       "notebook_name": "07_bronze_to_silver.py",
       "status": "SUCCESS",
-      "total_duration_sec": 45.2,
+      "total_duration_sec": 31.45,
       "stages": {
-        "schema_enforcement_and_validation": "12.4s",
-        "deduplication_and_rejected_write": "14.1s",
-        "delta_merge_into_silver": "18.7s"
+        "schema_enforcement_and_parsing": "19.69s",
+        "validation_and_rejected_write": "5.87s",
+        "deduplication_and_delta_merge": "5.88s"
       }
     },
     {
       "notebook_name": "08_anomaly_detection_and_evaluation.py",
       "status": "SUCCESS",
-      "total_duration_sec": 38.6,
+      "total_duration_sec": 46.72,
       "stages": {
-        "window_helper_calculations": "11.2s",
-        "anomaly_episode_aggregation": "15.3s",
-        "evaluation_metrics_matching": "12.1s"
+        "vehicle_enrichment_broadcast_join": "19.73s",
+        "window_haversine_and_movement_features": "7.49s",
+        "anomaly_detection_and_episode_aggregation": "13.49s",
+        "evaluation_metrics_matching": "6.01s"
       }
     }
   ]
