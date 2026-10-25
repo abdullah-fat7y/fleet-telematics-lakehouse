@@ -863,14 +863,14 @@ FROM [dbo].[evaluation_metrics];
 
 ## 10.7 Recorded Evaluation Results
 
-| Metric | Recorded value |
+| Metric | Value |
 |---|---:|
-| Precision | 0.00083269467110741 |
-| Recall | 0.16666666666666667 |
-| F1-score | 0.00165700002850041 |
-| True positives | 1 |
+| True positives | 2 |
 | Total detected episodes | 1,201 |
 | Total ground-truth groups | 6 |
+| Precision | 0.0017 (0.17%) |
+| Recall | 0.3333 (33.33%) |
+| F1 Score | 0.0033 |
 
 ### Interpretation
 
@@ -941,12 +941,12 @@ The deduplication counts reconcile:
 
 | Metric | Value |
 |---|---:|
-| True positives | 1 |
+| True positives | 2 |
 | Total detected episodes | 1,201 |
 | Total ground-truth groups | 6 |
-| Precision | 0.00083269467110741 |
-| Recall | 0.16666666666666667 |
-| F1-score | 0.00165700002850041 |
+| Precision | 0.0017 (0.17%) |
+| Recall | 0.3333 (33.33%) |
+| F1 Score | 0.0033 |
 
 ## 12.4 Complete Screenshot Inventory
 
