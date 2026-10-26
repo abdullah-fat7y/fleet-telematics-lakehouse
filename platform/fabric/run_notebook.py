@@ -1,6 +1,6 @@
 """Run a Fabric notebook on demand and wait for it to finish (Fabric REST API, Job Scheduler).
 
-    python run_notebook.py 08_load_landing_v2
+    python run_notebook.py 11_load_landing_v2
 
 Uses the same interactive sign-in as upload_to_onelake.py (token cached in the macOS keychain).
 This is the call an orchestrator (Airflow) makes to run a pipeline step.

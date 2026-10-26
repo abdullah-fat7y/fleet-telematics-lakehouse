@@ -29,7 +29,7 @@ cd ../generator
 | PostgreSQL | `localhost:55432`, db/user `fleet` (local only) |
 | Debezium Connect REST | http://localhost:8083/connectors |
 | Bridge log | `platform/bridge/logs/bridge_intervals.csv` (delivered, events/s, Kafka lag per 10 s) |
-| Cloud check | `ingestion/notebooks/07_check_bronze_v2.py` |
+| Cloud check | `ingestion/notebooks/10_check_bronze_v2.py` |
 
 ## Smoke test (2026-10-25)
 

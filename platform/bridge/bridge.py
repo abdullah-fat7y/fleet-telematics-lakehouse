@@ -136,6 +136,12 @@ class Bridge:
                     f.flush()
                     print(f"delivered {self.stats['delivered']:,} total, {row[5]:,} ev/s, kafka lag {row[6]}", flush=True)
                     last_log, last = time.time(), dict(self.stats)
+            # Final row on shutdown, so deliveries since the last 10 s row are not missing from the log.
+            elapsed = max(time.time() - last_log, 0.001)
+            delivered = self.stats["delivered"] - last["delivered"]
+            w.writerow([now_utc(), self.stats["consumed"] - last["consumed"], delivered,
+                        self.stats["dlq"] - last["dlq"], self.stats["retries"] - last["retries"],
+                        round(delivered / elapsed, 1), None])
         self.consumer.close()
         print("bridge stopped:", self.stats, flush=True)
 

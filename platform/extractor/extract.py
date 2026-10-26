@@ -11,7 +11,7 @@ Each hour of telemetry_history becomes one gzip JSON-lines file
 with one envelope per source row: {db_id, raw, is_valid, reject_reason, run_id, db_received_at,
 slice_hour, source: "db_extract", extract_id}. Every hour is recorded in extract_log (started -> done);
 an hour that is not 'done' is picked up again by the next --incremental run, so a crash loses nothing.
-Files are never overwritten (new extract_id each time); the Fabric loader (notebook 08) inserts rows by
+Files are never overwritten (new extract_id each time); the Fabric loader (notebook 11) inserts rows by
 db_id only once, so re-runs and backfills cannot create duplicates in the cloud.
 """
 import argparse

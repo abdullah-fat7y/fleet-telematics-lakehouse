@@ -1,4 +1,4 @@
-# Fabric notebook 08: batch path v2 - load the database extracts into bronze_telemetry_v2.
+# Fabric notebook 11: batch path v2 - load the database extracts into bronze_telemetry_v2.
 #
 # The extractor (platform/extractor/extract.py) writes one gzip JSON-lines file per hour slice of the
 # source table telemetry_history to Files/landing_v2/event_date=.../event_hour=.../part-<extract_id>.jsonl.gz.

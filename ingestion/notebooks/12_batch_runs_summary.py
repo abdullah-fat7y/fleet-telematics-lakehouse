@@ -1,4 +1,4 @@
-# Fabric notebook 09: evidence for the five batch runs of the v2 batch path (source DB -> extracts -> bronze).
+# Fabric notebook 12: evidence for the five batch runs of the v2 batch path (source DB -> extracts -> bronze).
 #   Run 1 initial load (2026-11-02, all hours) | Run 2 incremental #1 (new hour)
 #   Run 3 incremental #2 + re-run of an hour (idempotency) | Run 4 crash + retry | Run 5 backfill of an old hour
 
