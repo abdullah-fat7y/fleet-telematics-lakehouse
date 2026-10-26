@@ -1,0 +1,65 @@
+api run api-history-20261025T233246Z: 5000 vehicles, simulated h 24.0-48.0, 16 workers
+  fast-forwarding 24 simulated hours first so every vehicle starts in its real state
+    201,440 generated    174,000 sent  0 DLQ  17,277 ev/s  3158 vehicles
+    369,535 generated    340,000 sent  0 DLQ  16,598 ev/s  4152 vehicles
+    532,473 generated    504,000 sent  0 DLQ  15,769 ev/s  4831 vehicles
+    738,832 generated    712,000 sent  0 DLQ  20,392 ev/s  4787 vehicles
+    942,124 generated    918,000 sent  0 DLQ  18,982 ev/s  4521 vehicles
+  1,060,965 generated  1,038,973 sent  0 DLQ  12,089 ev/s  4183 vehicles
+  1,219,387 generated  1,200,973 sent  0 DLQ  15,508 ev/s  4060 vehicles
+  1,335,382 generated  1,332,973 sent  0 DLQ  12,607 ev/s  3850 vehicles
+  1,481,028 generated  1,468,973 sent  0 DLQ  12,330 ev/s  3916 vehicles
+  1,668,435 generated  1,660,973 sent  0 DLQ  18,196 ev/s  4095 vehicles
+  1,810,556 generated  1,800,973 sent  0 DLQ  13,865 ev/s  3990 vehicles
+  1,989,672 generated  1,982,973 sent  0 DLQ  16,743 ev/s  3990 vehicles
+  2,159,058 generated  2,146,973 sent  0 DLQ  15,981 ev/s  3674 vehicles
+  2,286,488 generated  2,272,973 sent  0 DLQ  12,344 ev/s  3215 vehicles
+  2,464,241 generated  2,462,973 sent  0 DLQ  18,069 ev/s  3103 vehicles
+  2,637,391 generated  2,626,973 sent  0 DLQ  15,850 ev/s  2829 vehicles
+  2,798,224 generated  2,788,973 sent  0 DLQ  15,923 ev/s  2558 vehicles
+  2,958,206 generated  2,950,973 sent  0 DLQ  16,196 ev/s  2467 vehicles
+  3,093,230 generated  3,094,973 sent  0 DLQ  13,958 ev/s  2331 vehicles
+  3,255,253 generated  3,258,973 sent  0 DLQ  16,277 ev/s  2255 vehicles
+  3,442,467 generated  3,442,973 sent  0 DLQ  18,346 ev/s  2060 vehicles
+  3,599,733 generated  3,600,973 sent  0 DLQ  15,798 ev/s  1645 vehicles
+  3,698,280 generated  3,700,973 sent  0 DLQ  9,998 ev/s  1251 vehicles
+  3,871,273 generated  3,885,717 sent  0 DLQ  18,470 ev/s  1022 vehicles
+{
+  "run_id": "api-history-20261025T233246Z",
+  "mode": "api",
+  "channel": "history",
+  "measured": true,
+  "dry_run": false,
+  "target_rate_eps": null,
+  "wall_clock_limit_min": null,
+  "files_written": null,
+  "vehicles": 5000,
+  "simulated_hours": 48.0,
+  "workers": 16,
+  "events_generated": 3974585,
+  "events_sent": 4014197,
+  "events_dlq": 0,
+  "retries": 0,
+  "duration_s": 254.0,
+  "events_per_s": 15803.4,
+  "anomaly_episodes": {
+    "cold_chain_breach": 194,
+    "excessive_idling": 477,
+    "route_deviation": 341
+  },
+  "bad_data_events": {
+    "duplicate": 39612,
+    "impossible_value": 7970,
+    "late_event": 11880,
+    "malformed_json": 11804,
+    "missing_field": 15821,
+    "null_required": 15932,
+    "wrong_type": 11796
+  },
+  "machine": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "processor": "arm",
+    "cpu_count": 10,
+    "python": "3.13.13"
+  }
+}

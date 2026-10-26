@@ -77,7 +77,8 @@ def extract_hour(conn, fs, root, extract_id, hour, mode, delays, crash_midway=Fa
             rows += 1
             rejected += not is_valid
             if crash_midway and rows == CRASH_AT_ROW:
-                print(f"  simulated crash while extracting {hour:%Y-%m-%d %H}:00 (file half written, not uploaded)")
+                print(f"  simulated crash while extracting {hour:%Y-%m-%d %H}:00 (file half written, not uploaded)",
+                      flush=True)  # os._exit skips the normal flush of buffered output
                 os._exit(1)  # like a kill -9: no cleanup, extract_log stays 'started'
     os.replace(local + ".tmp", local)
     if fs is not None and not upload(fs, local, f"{root}/landing_v2/{rel}", delays):
@@ -114,7 +115,7 @@ def main():
             rows, rej = extract_hour(conn, fs, root, extract_id, hour, mode, cfg["streaming"]["retry_delays_s"],
                                      crash_midway=args.fail_after is not None and i == args.fail_after)
             total, total_rej = total + rows, total_rej + rej
-            print(f"  {hour:%Y-%m-%d %H}:00  {rows:>8,} rows ({rej} rejected)  {time.time() - t0:5.1f} s")
+            print(f"  {hour:%Y-%m-%d %H}:00  {rows:>8,} rows ({rej} rejected)  {time.time() - t0:5.1f} s", flush=True)
     duration = time.time() - started
     summary = {"extract_id": extract_id, "mode": mode, "hours": len(hours), "rows": total, "rejected": total_rej,
                "duration_s": round(duration, 1), "rows_per_s": round(total / duration, 1) if duration else None}
