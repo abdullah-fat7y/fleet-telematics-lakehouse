@@ -470,8 +470,8 @@ The captured notebook output reports:
 | Metric | Reported count |
 |---|---:|
 | Total parsed | 8,272,514 |
-| Total rejected | 1,134,475 |
-| Total valid | 7,138,039 |
+| Total rejected | 1,134,75 |
+| Total valid | 8,146,714 |
 
 These values do not reconcile arithmetically because the reported valid and rejected counts sum to more than the reported parsed count.
 
