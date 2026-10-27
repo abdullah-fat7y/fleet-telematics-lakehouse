@@ -945,7 +945,7 @@ All screenshots are stored in `evidence/person2/`.
 
 ### 15.2 Schema parsing
 
-![Schema Parsing](https://raw.githubusercontent.com/abdullah-fat7y/fleet-telematics-lakehouse/feat/silver_processing/evidence/person2/02_Bronze-to-Silver%20Incremental%20Data%20Processing%20and%20Schema%20Parsing.png)
+![Schema Parsing](https://raw.githubusercontent.com/abdullah-fat7y/fleet-telematics-lakehouse/feat/silver_processing/evidence/person2/02_Bronze-to-Silver%20Incremental%20data%20Processing%20and%20Schema%20Parsing.png)
 
 ### 15.3 Data validation
 
