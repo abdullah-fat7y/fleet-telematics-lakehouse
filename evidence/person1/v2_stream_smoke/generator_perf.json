@@ -1,0 +1,38 @@
+{
+  "run_id": "api-live-20261025T230543Z",
+  "mode": "api",
+  "channel": "live",
+  "measured": true,
+  "dry_run": false,
+  "target_rate_eps": 200.0,
+  "wall_clock_limit_min": 1.0,
+  "files_written": null,
+  "vehicles": 50,
+  "simulated_hours": 96.0,
+  "workers": 4,
+  "events_generated": 12220,
+  "events_sent": 12325,
+  "events_dlq": 0,
+  "retries": 0,
+  "duration_s": 61.6,
+  "events_per_s": 200.0,
+  "anomaly_episodes": {
+    "excessive_idling": 1,
+    "route_deviation": 1
+  },
+  "bad_data_events": {
+    "duplicate": 105,
+    "impossible_value": 28,
+    "late_event": 25,
+    "malformed_json": 39,
+    "missing_field": 50,
+    "null_required": 34,
+    "wrong_type": 41
+  },
+  "machine": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "processor": "arm",
+    "cpu_count": 10,
+    "python": "3.13.13"
+  }
+}

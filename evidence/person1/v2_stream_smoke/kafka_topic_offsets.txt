@@ -1,0 +1,4 @@
+fleet.public.telemetry_live:0:3085
+fleet.public.telemetry_live:1:3039
+fleet.public.telemetry_live:2:3112
+fleet.public.telemetry_live:3:3089

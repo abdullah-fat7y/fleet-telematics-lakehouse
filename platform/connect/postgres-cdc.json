@@ -1,0 +1,28 @@
+{
+  "name": "fleet-postgres-cdc",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "plugin.name": "pgoutput",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "fleet",
+    "database.password": "fleet_local",
+    "database.dbname": "fleet",
+    "topic.prefix": "fleet",
+    "table.include.list": "public.telemetry_live",
+    "publication.autocreate.mode": "filtered",
+    "slot.name": "fleet_cdc",
+    "snapshot.mode": "initial",
+    "time.precision.mode": "adaptive_time_microseconds",
+    "transforms": "unwrap",
+    "transforms.unwrap.type": "io.debezium.transforms.ExtractNewRecordState",
+    "transforms.unwrap.add.fields": "op,lsn,source.ts_ms",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": "false",
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": "false",
+    "topic.creation.default.replication.factor": "1",
+    "topic.creation.default.partitions": "4",
+    "topic.creation.default.retention.ms": "259200000"
+  }
+}

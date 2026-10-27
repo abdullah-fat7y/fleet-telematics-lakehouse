@@ -167,32 +167,35 @@ def build_trips(cfg, vehicles, corridors):
         by_depot.setdefault(c["origin_depot_id"], []).append((c, "forward"))
         by_depot.setdefault(c["dest_depot_id"], []).append((c, "reverse"))
 
+    # Day 1 is generated first with the same random draws as before, so its trips (and the pilot
+    # data built on them) never change; later days are appended with continuing trip numbers.
     trips, n = [], 0
-    for v in vehicles:
-        corridor, direction = rng.choice(by_depot[v["home_depot_id"]])
-        start = sim_start + timedelta(seconds=interval * rng.randint(0, 180))  # first 90 minutes
-        for leg in range(cfg["fleet"]["trips_per_vehicle"]):
-            n += 1
-            d = direction if leg % 2 == 0 else ("reverse" if direction == "forward" else "forward")
-            origin, dest = ((corridor["origin_depot_id"], corridor["dest_depot_id"]) if d == "forward"
-                            else (corridor["dest_depot_id"], corridor["origin_depot_id"]))
-            drive_min = corridor["planned_distance_km"] / vb["cruise_speed_kmh"] * 60
-            stops = int(drive_min // vb["planned_stop_every_min"])
-            end = start + timedelta(minutes=drive_min + stops * vb["planned_stop_minutes"])
-            trips.append({
-                "trip_id": f"TRP-{n:06d}",
-                "vehicle_id": v["vehicle_id"],
-                "driver_id": v["assigned_driver_id"],
-                "corridor_id": corridor["corridor_id"],
-                "direction": d,
-                "origin_depot_id": origin,
-                "dest_depot_id": dest,
-                "planned_distance_km": corridor["planned_distance_km"],
-                "planned_start_utc": fmt_utc(start),
-                "planned_end_utc": fmt_utc(end),
-            })
-            # Turnaround at the destination before driving back.
-            start = end + timedelta(seconds=interval * rng.randint(60, 180))
+    for day in range(cfg["simulation"].get("days", 1)):
+        for v in vehicles:
+            corridor, direction = rng.choice(by_depot[v["home_depot_id"]])
+            start = sim_start + timedelta(days=day, seconds=interval * rng.randint(0, 180))  # first 90 minutes
+            for leg in range(cfg["fleet"]["trips_per_vehicle"]):
+                n += 1
+                d = direction if leg % 2 == 0 else ("reverse" if direction == "forward" else "forward")
+                origin, dest = ((corridor["origin_depot_id"], corridor["dest_depot_id"]) if d == "forward"
+                                else (corridor["dest_depot_id"], corridor["origin_depot_id"]))
+                drive_min = corridor["planned_distance_km"] / vb["cruise_speed_kmh"] * 60
+                stops = int(drive_min // vb["planned_stop_every_min"])
+                end = start + timedelta(minutes=drive_min + stops * vb["planned_stop_minutes"])
+                trips.append({
+                    "trip_id": f"TRP-{n:06d}",
+                    "vehicle_id": v["vehicle_id"],
+                    "driver_id": v["assigned_driver_id"],
+                    "corridor_id": corridor["corridor_id"],
+                    "direction": d,
+                    "origin_depot_id": origin,
+                    "dest_depot_id": dest,
+                    "planned_distance_km": corridor["planned_distance_km"],
+                    "planned_start_utc": fmt_utc(start),
+                    "planned_end_utc": fmt_utc(end),
+                })
+                # Turnaround at the destination before driving back.
+                start = end + timedelta(seconds=interval * rng.randint(60, 180))
     return trips
 
 

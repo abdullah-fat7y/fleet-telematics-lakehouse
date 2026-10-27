@@ -10,6 +10,11 @@
     python run_fleet.py --mode batch --from-hours 2 --hours 2.5
                                                  # batch path: files in output/landing/<run_id>/ for Files/landing
 
+    python run_fleet.py --mode api --channel history --from-hours 24 --hours 48
+                                                 # batch initial load: day 2 into the source database
+    python run_fleet.py --mode api --channel live --from-hours 72 --hours 96 --rate 700 --minutes 75
+                                                 # streaming golden run: day 4, steady 700 events/s for 75 min
+
 Outputs per run in output/runs/<run_id>/: telemetry_truth.csv, bad_data_manifest.csv, perf.json.
 Logs: output/logs/ingestion_intervals.csv (one row per interval) and output/logs/send_log.csv.
 """
@@ -33,8 +38,12 @@ def main():
                     help="only send readings from this simulated hour on (e.g. new data for a demo)")
     ap.add_argument("--vehicles", type=int, help="only the first N vehicles (default: all)")
     ap.add_argument("--workers", type=int, help="number of async workers (default: config)")
-    ap.add_argument("--mode", choices=["stream", "batch"], default="stream",
-                    help="stream = send to the Eventstream; batch = write files for Files/landing")
+    ap.add_argument("--mode", choices=["stream", "batch", "api"], default="stream",
+                    help="stream = Eventstream; batch = files for Files/landing; api = ingestion API (database)")
+    ap.add_argument("--channel", choices=["live", "history"], default="live",
+                    help="api mode: live = real-time feed (goes on to Kafka), history = bulk upload (batch extracts)")
+    ap.add_argument("--rate", type=float, help="hold the overall send rate at this many events/s")
+    ap.add_argument("--minutes", type=float, help="stop after this many minutes of real (wall-clock) time")
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--fail-first", type=int, default=0)
     args = ap.parse_args()
@@ -46,7 +55,9 @@ def main():
         raise SystemExit("Set EVENTSTREAM_CONNECTION_STRING in generator/.env (see README).")
     perf = asyncio.run(run_fleet(cfg, HERE, conn, hours=args.hours, max_vehicles=args.vehicles,
                                  workers=args.workers, fail_first=args.fail_first, dry_run=args.dry_run,
-                                 from_hours=args.from_hours, mode=args.mode))
+                                 from_hours=args.from_hours, mode=args.mode,
+                                 channel=args.channel if args.mode == "api" else None,
+                                 rate=args.rate, minutes=args.minutes))
     print(json.dumps(perf, indent=2))
 
 

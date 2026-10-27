@@ -1,0 +1,8 @@
+  reason_type   | count 
+----------------+-------
+ malformed_json |    39
+ missing_field  |    50
+ null_required  |    34
+ wrong_type     |    41
+(4 rows)
+
