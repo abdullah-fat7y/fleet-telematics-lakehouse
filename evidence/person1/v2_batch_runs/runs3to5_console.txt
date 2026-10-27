@@ -1,0 +1,36 @@
+=== RUN 3: incremental #2 + idempotency
+api run api-history-20261026T002332Z: 5000 vehicles, simulated h 55.0-56.0, 16 workers
+  "events_generated": 276421,
+  "events_sent": 279150,
+incremental extract x20261026T002745Z-d92e13: 1 hour slice(s)
+  2026-11-03 13:00   279,150 rows (3699 rejected)   35.0 s
+  "rows": 279150,
+  extractor exit code: 0
+rerun extract x20261026T002822Z-5baa07: 1 hour slice(s)
+  2026-11-03 12:00   293,897 rows (4019 rejected)   49.6 s
+  "rows": 293897,
+  extractor exit code: 0
+started 08_load_landing_v2 (job e585c2e3-9712-48a9-b0b1-128d9bc61125)
+     80 s  Completed
+=== RUN 4: failure + retry
+api run api-history-20261026T003037Z: 5000 vehicles, simulated h 56.0-58.0, 16 workers
+  "events_generated": 497903,
+  "events_sent": 502818,
+  extractor exit code: 1
+--- extract_log after the crash:
+11-03 14|done|274257
+11-03 15|started|
+--- restart
+incremental extract x20261026T003609Z-755aed: 1 hour slice(s)
+  2026-11-03 15:00   228,561 rows (3155 rejected)   41.8 s
+  "rows": 228561,
+  extractor exit code: 0
+started 08_load_landing_v2 (job 29ad74e7-0b09-404a-81f0-8d13d9ab3a82)
+     80 s  Completed
+=== RUN 5: backfill
+backfill extract x20261026T003817Z-b21cf8: 1 hour slice(s)
+  2026-11-02 10:00   424,918 rows (5838 rejected)   62.8 s
+  "rows": 424918,
+  extractor exit code: 0
+started 08_load_landing_v2 (job f10a3c65-58cf-4786-a50a-72110330c98c)
+     96 s  Completed

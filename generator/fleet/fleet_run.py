@@ -177,7 +177,8 @@ class Worker:
         self.index, self.files = index, 0
         self.buffers = {}
         self.flush_at = {"batch": self.cfg["batch"]["file_max_events"],
-                         "api": self.cfg["api"]["batch_events"]}.get(run.mode, self.cfg["streaming"]["batch_max_events"])
+                         "api": self.cfg["api"]["batch_events_history" if run.channel == "history" else "batch_events"]
+                         }.get(run.mode, self.cfg["streaming"]["batch_max_events"])
 
     def _write_file(self, envelopes):
         """Batch mode: one JSON-lines file of raw events, written to .tmp first so an uploader

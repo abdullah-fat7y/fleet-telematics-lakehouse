@@ -1,0 +1,500 @@
+api run api-live-20261026T004931Z: 5000 vehicles, simulated h 72.0-96.0, 16 workers, paced at 700.0 events/s, stops after 75.0 min
+  fast-forwarding 72 simulated hours first so every vehicle starts in its real state
+      8,452 generated      6,900 sent  0 DLQ  690 ev/s  694 vehicles
+TIMED RUN STARTED around 00:54:02
+     15,411 generated     13,900 sent  0 DLQ  700 ev/s  928 vehicles
+     22,373 generated     20,900 sent  0 DLQ  700 ev/s  1097 vehicles
+     29,326 generated     27,900 sent  0 DLQ  700 ev/s  1268 vehicles
+     36,272 generated     34,900 sent  0 DLQ  700 ev/s  1412 vehicles
+     43,337 generated     42,000 sent  0 DLQ  709 ev/s  1543 vehicles
+     50,278 generated     49,000 sent  0 DLQ  700 ev/s  1669 vehicles
+     57,232 generated     56,000 sent  0 DLQ  700 ev/s  1778 vehicles
+     64,180 generated     63,000 sent  0 DLQ  700 ev/s  1883 vehicles
+     71,119 generated     70,000 sent  0 DLQ  700 ev/s  1971 vehicles
+     78,073 generated     77,000 sent  0 DLQ  700 ev/s  2067 vehicles
+     85,032 generated     84,000 sent  0 DLQ  700 ev/s  2169 vehicles
+     92,007 generated     91,000 sent  0 DLQ  700 ev/s  2256 vehicles
+     98,965 generated     98,000 sent  0 DLQ  700 ev/s  2343 vehicles
+    105,928 generated    105,000 sent  0 DLQ  700 ev/s  2439 vehicles
+    112,882 generated    112,000 sent  0 DLQ  700 ev/s  2499 vehicles
+    119,747 generated    118,900 sent  0 DLQ  690 ev/s  2566 vehicles
+    126,802 generated    126,000 sent  0 DLQ  709 ev/s  2652 vehicles
+    133,752 generated    133,000 sent  0 DLQ  700 ev/s  2721 vehicles
+    140,699 generated    140,000 sent  0 DLQ  700 ev/s  2789 vehicles
+    147,646 generated    147,000 sent  0 DLQ  700 ev/s  2857 vehicles
+    154,618 generated    154,000 sent  0 DLQ  700 ev/s  2928 vehicles
+    161,581 generated    161,000 sent  0 DLQ  700 ev/s  2992 vehicles
+    168,534 generated    168,000 sent  0 DLQ  700 ev/s  3046 vehicles
+    175,473 generated    175,000 sent  0 DLQ  700 ev/s  3121 vehicles
+    182,427 generated    182,000 sent  0 DLQ  700 ev/s  3180 vehicles
+    189,377 generated    189,000 sent  0 DLQ  700 ev/s  3235 vehicles
+    196,332 generated    196,000 sent  0 DLQ  700 ev/s  3296 vehicles
+    203,277 generated    203,000 sent  0 DLQ  700 ev/s  3344 vehicles
+    210,222 generated    210,000 sent  0 DLQ  700 ev/s  3394 vehicles
+    217,177 generated    217,000 sent  0 DLQ  700 ev/s  3443 vehicles
+    224,133 generated    224,000 sent  0 DLQ  700 ev/s  3495 vehicles
+    231,074 generated    231,000 sent  0 DLQ  700 ev/s  3538 vehicles
+    238,017 generated    238,000 sent  0 DLQ  700 ev/s  3592 vehicles
+    244,974 generated    245,000 sent  0 DLQ  700 ev/s  3644 vehicles
+    251,930 generated    252,000 sent  0 DLQ  700 ev/s  3688 vehicles
+    258,892 generated    259,000 sent  0 DLQ  700 ev/s  3741 vehicles
+    265,852 generated    266,000 sent  0 DLQ  700 ev/s  3788 vehicles
+    272,798 generated    273,000 sent  0 DLQ  700 ev/s  3833 vehicles
+    279,763 generated    280,000 sent  0 DLQ  700 ev/s  3887 vehicles
+    286,728 generated    287,000 sent  0 DLQ  700 ev/s  3933 vehicles
+    293,669 generated    294,000 sent  0 DLQ  700 ev/s  3981 vehicles
+    300,610 generated    301,000 sent  0 DLQ  700 ev/s  4023 vehicles
+    307,573 generated    308,000 sent  0 DLQ  700 ev/s  4068 vehicles
+    314,520 generated    315,000 sent  0 DLQ  700 ev/s  4102 vehicles
+    321,473 generated    322,000 sent  0 DLQ  700 ev/s  4158 vehicles
+    328,405 generated    329,000 sent  0 DLQ  700 ev/s  4194 vehicles
+    335,365 generated    336,000 sent  0 DLQ  700 ev/s  4230 vehicles
+    342,340 generated    343,000 sent  0 DLQ  700 ev/s  4260 vehicles
+    349,293 generated    350,000 sent  0 DLQ  700 ev/s  4306 vehicles
+    356,234 generated    357,000 sent  0 DLQ  700 ev/s  4345 vehicles
+    363,173 generated    364,000 sent  0 DLQ  700 ev/s  4388 vehicles
+    370,113 generated    371,000 sent  0 DLQ  700 ev/s  4424 vehicles
+    377,078 generated    378,000 sent  0 DLQ  700 ev/s  4468 vehicles
+    384,028 generated    385,000 sent  0 DLQ  700 ev/s  4519 vehicles
+    390,971 generated    392,000 sent  0 DLQ  700 ev/s  4547 vehicles
+    397,908 generated    399,000 sent  0 DLQ  700 ev/s  4575 vehicles
+    404,867 generated    406,000 sent  0 DLQ  700 ev/s  4613 vehicles
+    411,812 generated    413,000 sent  0 DLQ  700 ev/s  4644 vehicles
+    418,762 generated    420,000 sent  0 DLQ  700 ev/s  4681 vehicles
+    425,805 generated    427,100 sent  0 DLQ  709 ev/s  4705 vehicles
+    432,773 generated    434,100 sent  0 DLQ  700 ev/s  4740 vehicles
+    439,729 generated    441,100 sent  0 DLQ  700 ev/s  4758 vehicles
+    446,686 generated    448,100 sent  0 DLQ  700 ev/s  4783 vehicles
+    453,638 generated    455,100 sent  0 DLQ  700 ev/s  4802 vehicles
+    460,587 generated    462,100 sent  0 DLQ  700 ev/s  4802 vehicles
+    467,547 generated    469,100 sent  0 DLQ  700 ev/s  4798 vehicles
+    474,511 generated    476,100 sent  0 DLQ  700 ev/s  4789 vehicles
+    481,463 generated    483,100 sent  0 DLQ  700 ev/s  4777 vehicles
+    488,423 generated    490,100 sent  0 DLQ  700 ev/s  4768 vehicles
+    495,373 generated    497,100 sent  0 DLQ  700 ev/s  4755 vehicles
+    502,321 generated    504,100 sent  0 DLQ  700 ev/s  4739 vehicles
+    509,271 generated    511,100 sent  0 DLQ  700 ev/s  4729 vehicles
+    516,208 generated    518,100 sent  0 DLQ  700 ev/s  4719 vehicles
+    523,161 generated    525,100 sent  0 DLQ  700 ev/s  4708 vehicles
+    530,118 generated    532,100 sent  0 DLQ  700 ev/s  4697 vehicles
+    537,063 generated    539,100 sent  0 DLQ  700 ev/s  4687 vehicles
+    544,023 generated    546,100 sent  0 DLQ  700 ev/s  4680 vehicles
+    550,777 generated    552,900 sent  0 DLQ  680 ev/s  4669 vehicles
+    557,935 generated    560,100 sent  0 DLQ  720 ev/s  4656 vehicles
+    564,914 generated    567,100 sent  0 DLQ  700 ev/s  4647 vehicles
+    571,863 generated    574,100 sent  0 DLQ  700 ev/s  4634 vehicles
+    578,824 generated    581,100 sent  0 DLQ  700 ev/s  4626 vehicles
+    585,777 generated    588,100 sent  0 DLQ  700 ev/s  4618 vehicles
+    592,726 generated    595,100 sent  0 DLQ  700 ev/s  4602 vehicles
+    599,665 generated    602,100 sent  0 DLQ  700 ev/s  4591 vehicles
+    606,617 generated    609,100 sent  0 DLQ  700 ev/s  4581 vehicles
+    613,570 generated    616,100 sent  0 DLQ  700 ev/s  4562 vehicles
+    620,505 generated    623,100 sent  0 DLQ  700 ev/s  4539 vehicles
+    627,462 generated    630,100 sent  0 DLQ  700 ev/s  4525 vehicles
+    634,426 generated    637,100 sent  0 DLQ  700 ev/s  4515 vehicles
+    641,380 generated    644,100 sent  0 DLQ  700 ev/s  4502 vehicles
+    648,324 generated    651,100 sent  0 DLQ  700 ev/s  4479 vehicles
+    655,267 generated    658,100 sent  0 DLQ  700 ev/s  4460 vehicles
+    662,235 generated    665,100 sent  0 DLQ  700 ev/s  4443 vehicles
+    669,199 generated    672,100 sent  0 DLQ  700 ev/s  4430 vehicles
+    676,161 generated    679,100 sent  0 DLQ  700 ev/s  4418 vehicles
+    683,122 generated    686,100 sent  0 DLQ  700 ev/s  4401 vehicles
+    690,066 generated    693,100 sent  0 DLQ  700 ev/s  4387 vehicles
+    697,023 generated    700,100 sent  0 DLQ  700 ev/s  4360 vehicles
+    703,988 generated    707,100 sent  0 DLQ  700 ev/s  4338 vehicles
+    710,929 generated    714,100 sent  0 DLQ  700 ev/s  4326 vehicles
+    717,897 generated    721,100 sent  0 DLQ  700 ev/s  4315 vehicles
+    724,870 generated    728,100 sent  0 DLQ  700 ev/s  4300 vehicles
+    731,803 generated    735,100 sent  0 DLQ  700 ev/s  4290 vehicles
+    738,742 generated    742,100 sent  0 DLQ  700 ev/s  4286 vehicles
+    745,714 generated    749,100 sent  0 DLQ  700 ev/s  4270 vehicles
+    752,663 generated    756,100 sent  0 DLQ  700 ev/s  4264 vehicles
+    759,624 generated    763,100 sent  0 DLQ  700 ev/s  4255 vehicles
+    766,585 generated    770,100 sent  0 DLQ  700 ev/s  4246 vehicles
+    773,532 generated    777,100 sent  0 DLQ  700 ev/s  4233 vehicles
+    780,478 generated    784,100 sent  0 DLQ  700 ev/s  4224 vehicles
+    787,431 generated    791,100 sent  0 DLQ  700 ev/s  4219 vehicles
+    794,370 generated    798,100 sent  0 DLQ  700 ev/s  4198 vehicles
+    801,309 generated    805,100 sent  0 DLQ  700 ev/s  4187 vehicles
+    808,264 generated    812,100 sent  0 DLQ  700 ev/s  4174 vehicles
+    815,231 generated    819,100 sent  0 DLQ  700 ev/s  4168 vehicles
+    822,194 generated    826,100 sent  0 DLQ  700 ev/s  4163 vehicles
+    829,144 generated    833,100 sent  0 DLQ  700 ev/s  4152 vehicles
+    836,082 generated    840,100 sent  0 DLQ  700 ev/s  4142 vehicles
+    843,152 generated    847,200 sent  0 DLQ  709 ev/s  4134 vehicles
+    850,101 generated    854,200 sent  0 DLQ  700 ev/s  4119 vehicles
+    857,047 generated    861,200 sent  0 DLQ  700 ev/s  4104 vehicles
+    863,997 generated    868,200 sent  0 DLQ  700 ev/s  4092 vehicles
+    870,947 generated    875,200 sent  0 DLQ  700 ev/s  4075 vehicles
+    877,880 generated    882,200 sent  0 DLQ  700 ev/s  4055 vehicles
+    884,833 generated    889,200 sent  0 DLQ  700 ev/s  4043 vehicles
+    891,778 generated    896,200 sent  0 DLQ  700 ev/s  4027 vehicles
+    898,724 generated    903,200 sent  0 DLQ  700 ev/s  4011 vehicles
+    905,681 generated    910,200 sent  0 DLQ  700 ev/s  4002 vehicles
+    912,636 generated    917,200 sent  0 DLQ  700 ev/s  3986 vehicles
+    919,593 generated    924,200 sent  0 DLQ  700 ev/s  3969 vehicles
+    926,548 generated    931,200 sent  0 DLQ  700 ev/s  3961 vehicles
+    933,500 generated    938,200 sent  0 DLQ  700 ev/s  3950 vehicles
+    940,460 generated    945,200 sent  0 DLQ  700 ev/s  3946 vehicles
+    947,417 generated    952,200 sent  0 DLQ  700 ev/s  3931 vehicles
+    954,374 generated    959,200 sent  0 DLQ  700 ev/s  3924 vehicles
+    961,336 generated    966,200 sent  0 DLQ  700 ev/s  3913 vehicles
+    968,300 generated    973,200 sent  0 DLQ  700 ev/s  3904 vehicles
+    975,259 generated    980,200 sent  0 DLQ  700 ev/s  3891 vehicles
+    982,198 generated    987,200 sent  0 DLQ  700 ev/s  3886 vehicles
+    989,152 generated    994,200 sent  0 DLQ  700 ev/s  3880 vehicles
+    996,113 generated  1,001,200 sent  0 DLQ  700 ev/s  3882 vehicles
+  1,003,060 generated  1,008,200 sent  0 DLQ  700 ev/s  3866 vehicles
+  1,010,027 generated  1,015,200 sent  0 DLQ  700 ev/s  3855 vehicles
+  1,016,960 generated  1,022,200 sent  0 DLQ  700 ev/s  3847 vehicles
+  1,023,896 generated  1,029,200 sent  0 DLQ  700 ev/s  3848 vehicles
+  1,030,847 generated  1,036,200 sent  0 DLQ  700 ev/s  3837 vehicles
+  1,037,786 generated  1,043,200 sent  0 DLQ  700 ev/s  3830 vehicles
+  1,044,731 generated  1,050,200 sent  0 DLQ  700 ev/s  3822 vehicles
+  1,051,686 generated  1,057,200 sent  0 DLQ  700 ev/s  3820 vehicles
+  1,058,642 generated  1,064,200 sent  0 DLQ  700 ev/s  3814 vehicles
+  1,065,595 generated  1,071,200 sent  0 DLQ  700 ev/s  3798 vehicles
+  1,072,544 generated  1,078,200 sent  0 DLQ  700 ev/s  3792 vehicles
+  1,079,484 generated  1,085,200 sent  0 DLQ  700 ev/s  3784 vehicles
+  1,086,445 generated  1,092,200 sent  0 DLQ  700 ev/s  3783 vehicles
+  1,093,397 generated  1,099,200 sent  0 DLQ  700 ev/s  3780 vehicles
+  1,100,331 generated  1,106,200 sent  0 DLQ  700 ev/s  3769 vehicles
+  1,107,284 generated  1,113,200 sent  0 DLQ  700 ev/s  3770 vehicles
+  1,114,219 generated  1,120,200 sent  0 DLQ  700 ev/s  3772 vehicles
+  1,121,158 generated  1,127,200 sent  0 DLQ  700 ev/s  3768 vehicles
+  1,128,099 generated  1,134,200 sent  0 DLQ  700 ev/s  3768 vehicles
+  1,135,046 generated  1,141,200 sent  0 DLQ  700 ev/s  3771 vehicles
+  1,141,995 generated  1,148,200 sent  0 DLQ  700 ev/s  3759 vehicles
+  1,148,942 generated  1,155,200 sent  0 DLQ  700 ev/s  3753 vehicles
+  1,155,869 generated  1,162,200 sent  0 DLQ  700 ev/s  3758 vehicles
+  1,162,811 generated  1,169,200 sent  0 DLQ  700 ev/s  3762 vehicles
+  1,169,758 generated  1,176,200 sent  0 DLQ  700 ev/s  3773 vehicles
+  1,176,706 generated  1,183,200 sent  0 DLQ  700 ev/s  3781 vehicles
+  1,183,663 generated  1,190,200 sent  0 DLQ  700 ev/s  3791 vehicles
+  1,190,616 generated  1,197,200 sent  0 DLQ  700 ev/s  3795 vehicles
+  1,197,561 generated  1,204,200 sent  0 DLQ  700 ev/s  3796 vehicles
+  1,204,503 generated  1,211,200 sent  0 DLQ  700 ev/s  3796 vehicles
+  1,211,464 generated  1,218,200 sent  0 DLQ  700 ev/s  3802 vehicles
+  1,218,411 generated  1,225,200 sent  0 DLQ  700 ev/s  3815 vehicles
+  1,225,359 generated  1,232,200 sent  0 DLQ  700 ev/s  3825 vehicles
+  1,232,308 generated  1,239,200 sent  0 DLQ  700 ev/s  3829 vehicles
+  1,239,260 generated  1,246,200 sent  0 DLQ  700 ev/s  3837 vehicles
+  1,246,325 generated  1,253,300 sent  0 DLQ  710 ev/s  3845 vehicles
+  1,253,268 generated  1,260,300 sent  0 DLQ  700 ev/s  3845 vehicles
+  1,260,225 generated  1,267,300 sent  0 DLQ  700 ev/s  3849 vehicles
+  1,267,186 generated  1,274,300 sent  0 DLQ  700 ev/s  3853 vehicles
+  1,274,143 generated  1,281,300 sent  0 DLQ  700 ev/s  3860 vehicles
+  1,281,110 generated  1,288,300 sent  0 DLQ  700 ev/s  3859 vehicles
+  1,288,057 generated  1,295,300 sent  0 DLQ  700 ev/s  3869 vehicles
+  1,295,009 generated  1,302,300 sent  0 DLQ  700 ev/s  3873 vehicles
+  1,301,960 generated  1,309,300 sent  0 DLQ  700 ev/s  3885 vehicles
+  1,308,922 generated  1,316,300 sent  0 DLQ  700 ev/s  3890 vehicles
+  1,315,886 generated  1,323,300 sent  0 DLQ  700 ev/s  3892 vehicles
+  1,322,840 generated  1,330,300 sent  0 DLQ  700 ev/s  3904 vehicles
+  1,329,789 generated  1,337,300 sent  0 DLQ  700 ev/s  3906 vehicles
+  1,336,750 generated  1,344,300 sent  0 DLQ  700 ev/s  3920 vehicles
+  1,343,716 generated  1,351,300 sent  0 DLQ  700 ev/s  3928 vehicles
+  1,350,668 generated  1,358,300 sent  0 DLQ  700 ev/s  3933 vehicles
+  1,357,618 generated  1,365,300 sent  0 DLQ  700 ev/s  3931 vehicles
+  1,364,571 generated  1,372,300 sent  0 DLQ  700 ev/s  3929 vehicles
+  1,371,507 generated  1,379,300 sent  0 DLQ  700 ev/s  3935 vehicles
+  1,378,465 generated  1,386,300 sent  0 DLQ  700 ev/s  3933 vehicles
+  1,385,409 generated  1,393,300 sent  0 DLQ  700 ev/s  3939 vehicles
+  1,392,366 generated  1,400,300 sent  0 DLQ  700 ev/s  3942 vehicles
+  1,398,423 generated  1,406,400 sent  0 DLQ  610 ev/s  3943 vehicles
+  1,406,262 generated  1,414,300 sent  0 DLQ  790 ev/s  3952 vehicles
+  1,413,233 generated  1,421,300 sent  0 DLQ  700 ev/s  3953 vehicles
+  1,420,182 generated  1,428,300 sent  0 DLQ  700 ev/s  3967 vehicles
+  1,427,131 generated  1,435,300 sent  0 DLQ  700 ev/s  3964 vehicles
+  1,434,067 generated  1,442,300 sent  0 DLQ  700 ev/s  3969 vehicles
+  1,441,012 generated  1,449,300 sent  0 DLQ  700 ev/s  3971 vehicles
+  1,447,971 generated  1,456,300 sent  0 DLQ  700 ev/s  3974 vehicles
+  1,454,940 generated  1,463,300 sent  0 DLQ  701 ev/s  3986 vehicles
+  1,461,884 generated  1,470,300 sent  0 DLQ  700 ev/s  3987 vehicles
+  1,468,835 generated  1,477,300 sent  0 DLQ  700 ev/s  3987 vehicles
+BRIDGE RESTART at 01:29:02
+ Container fleet-platform-bridge-1 Restarting 
+ Container fleet-platform-bridge-1 Started 
+BRIDGE BACK at 01:29:04
+  1,475,792 generated  1,484,300 sent  0 DLQ  700 ev/s  4000 vehicles
+  1,482,739 generated  1,491,300 sent  0 DLQ  700 ev/s  4004 vehicles
+  1,489,690 generated  1,498,300 sent  0 DLQ  700 ev/s  4007 vehicles
+  1,496,638 generated  1,505,300 sent  0 DLQ  700 ev/s  4015 vehicles
+  1,503,588 generated  1,512,300 sent  0 DLQ  700 ev/s  4017 vehicles
+  1,510,553 generated  1,519,300 sent  0 DLQ  700 ev/s  4016 vehicles
+  1,517,501 generated  1,526,300 sent  0 DLQ  700 ev/s  4020 vehicles
+  1,524,442 generated  1,533,300 sent  0 DLQ  700 ev/s  4029 vehicles
+  1,531,385 generated  1,540,300 sent  0 DLQ  700 ev/s  4022 vehicles
+  1,538,328 generated  1,547,300 sent  0 DLQ  700 ev/s  4016 vehicles
+  1,545,374 generated  1,554,400 sent  0 DLQ  709 ev/s  4009 vehicles
+  1,552,323 generated  1,561,400 sent  0 DLQ  700 ev/s  4014 vehicles
+  1,559,291 generated  1,568,400 sent  0 DLQ  700 ev/s  4008 vehicles
+  1,566,233 generated  1,575,400 sent  0 DLQ  700 ev/s  4008 vehicles
+  1,573,189 generated  1,582,400 sent  0 DLQ  700 ev/s  4005 vehicles
+  1,580,146 generated  1,589,400 sent  0 DLQ  700 ev/s  3995 vehicles
+  1,587,088 generated  1,596,400 sent  0 DLQ  700 ev/s  3992 vehicles
+  1,594,055 generated  1,603,400 sent  0 DLQ  700 ev/s  3989 vehicles
+  1,601,010 generated  1,610,400 sent  0 DLQ  700 ev/s  3975 vehicles
+  1,607,938 generated  1,617,400 sent  0 DLQ  700 ev/s  3969 vehicles
+  1,614,895 generated  1,624,400 sent  0 DLQ  700 ev/s  3964 vehicles
+  1,621,843 generated  1,631,400 sent  0 DLQ  700 ev/s  3962 vehicles
+  1,628,804 generated  1,638,400 sent  0 DLQ  700 ev/s  3961 vehicles
+  1,635,772 generated  1,645,400 sent  0 DLQ  700 ev/s  3953 vehicles
+  1,642,719 generated  1,652,400 sent  0 DLQ  700 ev/s  3948 vehicles
+  1,649,668 generated  1,659,400 sent  0 DLQ  700 ev/s  3937 vehicles
+  1,656,623 generated  1,666,400 sent  0 DLQ  700 ev/s  3931 vehicles
+  1,663,574 generated  1,673,400 sent  0 DLQ  700 ev/s  3932 vehicles
+  1,670,533 generated  1,680,400 sent  0 DLQ  700 ev/s  3928 vehicles
+  1,677,468 generated  1,687,400 sent  0 DLQ  700 ev/s  3928 vehicles
+  1,684,412 generated  1,694,400 sent  0 DLQ  700 ev/s  3923 vehicles
+  1,691,369 generated  1,701,400 sent  0 DLQ  700 ev/s  3920 vehicles
+  1,698,317 generated  1,708,400 sent  0 DLQ  700 ev/s  3910 vehicles
+  1,705,292 generated  1,715,400 sent  0 DLQ  700 ev/s  3901 vehicles
+  1,712,240 generated  1,722,400 sent  0 DLQ  700 ev/s  3879 vehicles
+  1,719,197 generated  1,729,400 sent  0 DLQ  700 ev/s  3874 vehicles
+  1,726,140 generated  1,736,400 sent  0 DLQ  700 ev/s  3858 vehicles
+  1,733,089 generated  1,743,400 sent  0 DLQ  700 ev/s  3845 vehicles
+  1,740,042 generated  1,750,400 sent  0 DLQ  700 ev/s  3834 vehicles
+  1,746,995 generated  1,757,400 sent  0 DLQ  700 ev/s  3825 vehicles
+  1,753,939 generated  1,764,400 sent  0 DLQ  700 ev/s  3806 vehicles
+  1,760,885 generated  1,771,400 sent  0 DLQ  700 ev/s  3792 vehicles
+  1,767,827 generated  1,778,400 sent  0 DLQ  700 ev/s  3781 vehicles
+  1,774,772 generated  1,785,400 sent  0 DLQ  700 ev/s  3765 vehicles
+  1,781,729 generated  1,792,400 sent  0 DLQ  700 ev/s  3750 vehicles
+  1,788,693 generated  1,799,400 sent  0 DLQ  700 ev/s  3745 vehicles
+  1,795,645 generated  1,806,400 sent  0 DLQ  700 ev/s  3730 vehicles
+  1,802,589 generated  1,813,400 sent  0 DLQ  700 ev/s  3719 vehicles
+  1,809,545 generated  1,820,400 sent  0 DLQ  700 ev/s  3701 vehicles
+  1,816,483 generated  1,827,400 sent  0 DLQ  700 ev/s  3691 vehicles
+  1,823,440 generated  1,834,400 sent  0 DLQ  700 ev/s  3665 vehicles
+  1,830,384 generated  1,841,400 sent  0 DLQ  700 ev/s  3647 vehicles
+  1,837,306 generated  1,848,400 sent  0 DLQ  700 ev/s  3647 vehicles
+  1,844,251 generated  1,855,400 sent  0 DLQ  700 ev/s  3632 vehicles
+  1,851,203 generated  1,862,400 sent  0 DLQ  700 ev/s  3619 vehicles
+  1,858,150 generated  1,869,400 sent  0 DLQ  700 ev/s  3594 vehicles
+  1,865,106 generated  1,876,400 sent  0 DLQ  700 ev/s  3572 vehicles
+  1,872,054 generated  1,883,400 sent  0 DLQ  700 ev/s  3544 vehicles
+  1,878,994 generated  1,890,400 sent  0 DLQ  700 ev/s  3525 vehicles
+  1,885,947 generated  1,897,400 sent  0 DLQ  700 ev/s  3505 vehicles
+  1,892,895 generated  1,904,400 sent  0 DLQ  700 ev/s  3488 vehicles
+  1,899,941 generated  1,911,500 sent  0 DLQ  709 ev/s  3468 vehicles
+  1,906,895 generated  1,918,500 sent  0 DLQ  700 ev/s  3452 vehicles
+  1,913,848 generated  1,925,500 sent  0 DLQ  700 ev/s  3439 vehicles
+  1,920,794 generated  1,932,500 sent  0 DLQ  700 ev/s  3419 vehicles
+  1,927,774 generated  1,939,500 sent  0 DLQ  700 ev/s  3407 vehicles
+  1,934,725 generated  1,946,500 sent  0 DLQ  700 ev/s  3393 vehicles
+  1,941,671 generated  1,953,500 sent  0 DLQ  700 ev/s  3370 vehicles
+  1,948,638 generated  1,960,500 sent  0 DLQ  700 ev/s  3363 vehicles
+  1,955,575 generated  1,967,500 sent  0 DLQ  700 ev/s  3329 vehicles
+  1,962,525 generated  1,974,500 sent  0 DLQ  700 ev/s  3307 vehicles
+  1,969,469 generated  1,981,500 sent  0 DLQ  700 ev/s  3289 vehicles
+  1,976,412 generated  1,988,500 sent  0 DLQ  700 ev/s  3267 vehicles
+  1,983,358 generated  1,995,500 sent  0 DLQ  700 ev/s  3253 vehicles
+  1,990,297 generated  2,002,500 sent  0 DLQ  700 ev/s  3234 vehicles
+  1,997,252 generated  2,009,500 sent  0 DLQ  700 ev/s  3229 vehicles
+  2,004,220 generated  2,016,500 sent  0 DLQ  700 ev/s  3206 vehicles
+  2,011,169 generated  2,023,500 sent  0 DLQ  700 ev/s  3189 vehicles
+  2,018,111 generated  2,030,500 sent  0 DLQ  700 ev/s  3183 vehicles
+  2,025,048 generated  2,037,500 sent  0 DLQ  700 ev/s  3155 vehicles
+  2,032,012 generated  2,044,500 sent  0 DLQ  700 ev/s  3134 vehicles
+  2,038,963 generated  2,051,500 sent  0 DLQ  700 ev/s  3123 vehicles
+  2,045,915 generated  2,058,500 sent  0 DLQ  700 ev/s  3103 vehicles
+  2,052,858 generated  2,065,500 sent  0 DLQ  700 ev/s  3085 vehicles
+  2,059,821 generated  2,072,500 sent  0 DLQ  700 ev/s  3076 vehicles
+  2,066,773 generated  2,079,500 sent  0 DLQ  700 ev/s  3055 vehicles
+  2,073,719 generated  2,086,500 sent  0 DLQ  700 ev/s  3037 vehicles
+  2,080,666 generated  2,093,500 sent  0 DLQ  700 ev/s  3011 vehicles
+  2,087,627 generated  2,100,500 sent  0 DLQ  700 ev/s  2987 vehicles
+  2,094,587 generated  2,107,500 sent  0 DLQ  700 ev/s  2961 vehicles
+  2,101,531 generated  2,114,500 sent  0 DLQ  700 ev/s  2938 vehicles
+  2,108,503 generated  2,121,500 sent  0 DLQ  700 ev/s  2918 vehicles
+  2,115,451 generated  2,128,500 sent  0 DLQ  700 ev/s  2900 vehicles
+  2,122,414 generated  2,135,500 sent  0 DLQ  700 ev/s  2887 vehicles
+  2,129,383 generated  2,142,500 sent  0 DLQ  700 ev/s  2854 vehicles
+  2,136,323 generated  2,149,500 sent  0 DLQ  700 ev/s  2835 vehicles
+  2,143,277 generated  2,156,500 sent  0 DLQ  700 ev/s  2812 vehicles
+  2,150,239 generated  2,163,500 sent  0 DLQ  700 ev/s  2796 vehicles
+  2,157,197 generated  2,170,500 sent  0 DLQ  700 ev/s  2774 vehicles
+  2,164,141 generated  2,177,500 sent  0 DLQ  700 ev/s  2768 vehicles
+  2,171,084 generated  2,184,500 sent  0 DLQ  700 ev/s  2747 vehicles
+  2,178,028 generated  2,191,500 sent  0 DLQ  700 ev/s  2726 vehicles
+  2,184,970 generated  2,198,500 sent  0 DLQ  700 ev/s  2711 vehicles
+  2,191,921 generated  2,205,500 sent  0 DLQ  700 ev/s  2701 vehicles
+  2,198,868 generated  2,212,500 sent  0 DLQ  700 ev/s  2692 vehicles
+  2,205,832 generated  2,219,500 sent  0 DLQ  700 ev/s  2666 vehicles
+  2,212,785 generated  2,226,500 sent  0 DLQ  700 ev/s  2666 vehicles
+  2,219,740 generated  2,233,500 sent  0 DLQ  700 ev/s  2663 vehicles
+  2,226,698 generated  2,240,500 sent  0 DLQ  700 ev/s  2647 vehicles
+  2,233,660 generated  2,247,500 sent  0 DLQ  700 ev/s  2641 vehicles
+  2,240,619 generated  2,254,500 sent  0 DLQ  700 ev/s  2622 vehicles
+  2,247,569 generated  2,261,500 sent  0 DLQ  700 ev/s  2621 vehicles
+  2,254,509 generated  2,268,500 sent  0 DLQ  700 ev/s  2613 vehicles
+  2,261,455 generated  2,275,500 sent  0 DLQ  700 ev/s  2600 vehicles
+  2,268,414 generated  2,282,500 sent  0 DLQ  700 ev/s  2594 vehicles
+  2,275,362 generated  2,289,500 sent  0 DLQ  700 ev/s  2588 vehicles
+  2,282,330 generated  2,296,500 sent  0 DLQ  700 ev/s  2577 vehicles
+  2,289,278 generated  2,303,500 sent  0 DLQ  700 ev/s  2565 vehicles
+  2,296,213 generated  2,310,500 sent  0 DLQ  700 ev/s  2564 vehicles
+  2,303,166 generated  2,317,500 sent  0 DLQ  700 ev/s  2562 vehicles
+  2,310,106 generated  2,324,500 sent  0 DLQ  700 ev/s  2560 vehicles
+  2,316,749 generated  2,331,200 sent  0 DLQ  657 ev/s  2553 vehicles
+  2,324,196 generated  2,338,700 sent  0 DLQ  749 ev/s  2539 vehicles
+  2,331,149 generated  2,345,700 sent  0 DLQ  700 ev/s  2534 vehicles
+  2,338,099 generated  2,352,700 sent  0 DLQ  700 ev/s  2515 vehicles
+  2,345,065 generated  2,359,700 sent  0 DLQ  700 ev/s  2497 vehicles
+  2,351,998 generated  2,366,700 sent  0 DLQ  700 ev/s  2484 vehicles
+  2,358,948 generated  2,373,700 sent  0 DLQ  700 ev/s  2490 vehicles
+  2,365,892 generated  2,380,700 sent  0 DLQ  700 ev/s  2485 vehicles
+  2,372,847 generated  2,387,700 sent  0 DLQ  700 ev/s  2477 vehicles
+  2,379,789 generated  2,394,700 sent  0 DLQ  700 ev/s  2472 vehicles
+  2,386,750 generated  2,401,700 sent  0 DLQ  700 ev/s  2476 vehicles
+  2,393,702 generated  2,408,700 sent  0 DLQ  700 ev/s  2473 vehicles
+  2,400,658 generated  2,415,700 sent  0 DLQ  700 ev/s  2469 vehicles
+  2,407,600 generated  2,422,700 sent  0 DLQ  700 ev/s  2467 vehicles
+  2,414,552 generated  2,429,700 sent  0 DLQ  700 ev/s  2460 vehicles
+  2,421,501 generated  2,436,700 sent  0 DLQ  700 ev/s  2449 vehicles
+  2,428,446 generated  2,443,700 sent  0 DLQ  700 ev/s  2433 vehicles
+  2,435,402 generated  2,450,700 sent  0 DLQ  700 ev/s  2424 vehicles
+  2,442,346 generated  2,457,700 sent  0 DLQ  700 ev/s  2416 vehicles
+  2,449,290 generated  2,464,700 sent  0 DLQ  700 ev/s  2404 vehicles
+  2,456,220 generated  2,471,700 sent  0 DLQ  700 ev/s  2405 vehicles
+  2,463,161 generated  2,478,700 sent  0 DLQ  700 ev/s  2397 vehicles
+  2,470,087 generated  2,485,700 sent  0 DLQ  700 ev/s  2386 vehicles
+  2,477,020 generated  2,492,700 sent  0 DLQ  700 ev/s  2381 vehicles
+  2,483,968 generated  2,499,700 sent  0 DLQ  700 ev/s  2378 vehicles
+  2,490,919 generated  2,506,700 sent  0 DLQ  700 ev/s  2385 vehicles
+  2,497,853 generated  2,513,700 sent  0 DLQ  700 ev/s  2381 vehicles
+  2,504,785 generated  2,520,700 sent  0 DLQ  700 ev/s  2379 vehicles
+  2,511,730 generated  2,527,700 sent  0 DLQ  700 ev/s  2377 vehicles
+  2,518,665 generated  2,534,700 sent  0 DLQ  700 ev/s  2372 vehicles
+  2,525,631 generated  2,541,700 sent  0 DLQ  700 ev/s  2368 vehicles
+  2,532,581 generated  2,548,700 sent  0 DLQ  700 ev/s  2371 vehicles
+  2,539,515 generated  2,555,700 sent  0 DLQ  700 ev/s  2357 vehicles
+  2,546,429 generated  2,562,700 sent  0 DLQ  700 ev/s  2347 vehicles
+  2,553,384 generated  2,569,700 sent  0 DLQ  700 ev/s  2334 vehicles
+  2,560,320 generated  2,576,700 sent  0 DLQ  700 ev/s  2326 vehicles
+  2,567,268 generated  2,583,700 sent  0 DLQ  700 ev/s  2320 vehicles
+  2,574,211 generated  2,590,700 sent  0 DLQ  700 ev/s  2318 vehicles
+  2,581,156 generated  2,597,700 sent  0 DLQ  700 ev/s  2317 vehicles
+  2,588,101 generated  2,604,700 sent  0 DLQ  700 ev/s  2328 vehicles
+  2,595,035 generated  2,611,700 sent  0 DLQ  700 ev/s  2321 vehicles
+  2,601,966 generated  2,618,700 sent  0 DLQ  700 ev/s  2322 vehicles
+  2,608,871 generated  2,625,700 sent  0 DLQ  700 ev/s  2321 vehicles
+  2,615,800 generated  2,632,700 sent  0 DLQ  700 ev/s  2317 vehicles
+  2,622,722 generated  2,639,700 sent  0 DLQ  700 ev/s  2309 vehicles
+  2,629,648 generated  2,646,700 sent  0 DLQ  700 ev/s  2304 vehicles
+  2,636,582 generated  2,653,700 sent  0 DLQ  700 ev/s  2305 vehicles
+  2,643,472 generated  2,660,700 sent  0 DLQ  700 ev/s  2302 vehicles
+  2,650,383 generated  2,667,700 sent  0 DLQ  699 ev/s  2306 vehicles
+  2,657,398 generated  2,674,800 sent  0 DLQ  710 ev/s  2298 vehicles
+  2,664,336 generated  2,681,800 sent  0 DLQ  700 ev/s  2290 vehicles
+  2,671,250 generated  2,688,800 sent  0 DLQ  700 ev/s  2293 vehicles
+  2,678,166 generated  2,695,800 sent  0 DLQ  700 ev/s  2284 vehicles
+  2,685,097 generated  2,702,800 sent  0 DLQ  700 ev/s  2283 vehicles
+  2,692,023 generated  2,709,800 sent  0 DLQ  700 ev/s  2278 vehicles
+  2,698,927 generated  2,716,800 sent  0 DLQ  700 ev/s  2275 vehicles
+  2,705,844 generated  2,723,800 sent  0 DLQ  700 ev/s  2271 vehicles
+  2,712,760 generated  2,730,800 sent  0 DLQ  700 ev/s  2262 vehicles
+  2,719,680 generated  2,737,800 sent  0 DLQ  700 ev/s  2264 vehicles
+  2,726,594 generated  2,744,800 sent  0 DLQ  700 ev/s  2248 vehicles
+  2,733,515 generated  2,751,800 sent  0 DLQ  700 ev/s  2249 vehicles
+  2,740,432 generated  2,758,800 sent  0 DLQ  700 ev/s  2258 vehicles
+  2,747,331 generated  2,765,800 sent  0 DLQ  700 ev/s  2257 vehicles
+  2,754,249 generated  2,772,800 sent  0 DLQ  700 ev/s  2253 vehicles
+  2,761,164 generated  2,779,800 sent  0 DLQ  700 ev/s  2260 vehicles
+  2,768,068 generated  2,786,800 sent  0 DLQ  700 ev/s  2259 vehicles
+  2,774,979 generated  2,793,800 sent  0 DLQ  700 ev/s  2251 vehicles
+  2,781,915 generated  2,800,800 sent  0 DLQ  700 ev/s  2248 vehicles
+  2,788,831 generated  2,807,800 sent  0 DLQ  700 ev/s  2247 vehicles
+  2,795,764 generated  2,814,800 sent  0 DLQ  700 ev/s  2235 vehicles
+  2,802,658 generated  2,821,800 sent  0 DLQ  700 ev/s  2223 vehicles
+  2,809,585 generated  2,828,800 sent  0 DLQ  700 ev/s  2216 vehicles
+  2,816,491 generated  2,835,800 sent  0 DLQ  700 ev/s  2219 vehicles
+  2,823,395 generated  2,842,800 sent  0 DLQ  700 ev/s  2219 vehicles
+  2,830,299 generated  2,849,800 sent  0 DLQ  700 ev/s  2223 vehicles
+  2,837,209 generated  2,856,800 sent  0 DLQ  700 ev/s  2217 vehicles
+  2,844,119 generated  2,863,800 sent  0 DLQ  700 ev/s  2223 vehicles
+  2,851,017 generated  2,870,800 sent  0 DLQ  700 ev/s  2225 vehicles
+  2,857,923 generated  2,877,800 sent  0 DLQ  700 ev/s  2224 vehicles
+  2,864,825 generated  2,884,800 sent  0 DLQ  700 ev/s  2221 vehicles
+  2,871,703 generated  2,891,800 sent  0 DLQ  700 ev/s  2218 vehicles
+  2,878,616 generated  2,898,800 sent  0 DLQ  700 ev/s  2218 vehicles
+  2,885,520 generated  2,905,800 sent  0 DLQ  700 ev/s  2219 vehicles
+  2,892,428 generated  2,912,800 sent  0 DLQ  700 ev/s  2227 vehicles
+  2,899,334 generated  2,919,800 sent  0 DLQ  700 ev/s  2236 vehicles
+  2,906,258 generated  2,926,800 sent  0 DLQ  705 ev/s  2239 vehicles
+  2,913,170 generated  2,933,800 sent  0 DLQ  700 ev/s  2242 vehicles
+  2,920,075 generated  2,940,800 sent  0 DLQ  700 ev/s  2246 vehicles
+  2,927,001 generated  2,947,800 sent  0 DLQ  700 ev/s  2245 vehicles
+  2,933,927 generated  2,954,800 sent  0 DLQ  700 ev/s  2248 vehicles
+  2,940,831 generated  2,961,800 sent  0 DLQ  700 ev/s  2249 vehicles
+  2,947,750 generated  2,968,800 sent  0 DLQ  700 ev/s  2258 vehicles
+  2,954,680 generated  2,975,800 sent  0 DLQ  700 ev/s  2253 vehicles
+  2,961,588 generated  2,982,800 sent  0 DLQ  700 ev/s  2254 vehicles
+  2,968,481 generated  2,989,800 sent  0 DLQ  700 ev/s  2252 vehicles
+  2,975,387 generated  2,996,800 sent  0 DLQ  700 ev/s  2253 vehicles
+  2,982,277 generated  3,003,800 sent  0 DLQ  700 ev/s  2257 vehicles
+  2,989,189 generated  3,010,800 sent  0 DLQ  700 ev/s  2259 vehicles
+  2,996,082 generated  3,017,800 sent  0 DLQ  700 ev/s  2257 vehicles
+  3,003,005 generated  3,024,800 sent  0 DLQ  700 ev/s  2261 vehicles
+  3,009,921 generated  3,031,800 sent  0 DLQ  700 ev/s  2257 vehicles
+  3,016,841 generated  3,038,800 sent  0 DLQ  700 ev/s  2255 vehicles
+  3,023,760 generated  3,045,800 sent  0 DLQ  700 ev/s  2257 vehicles
+  3,030,675 generated  3,052,800 sent  0 DLQ  700 ev/s  2252 vehicles
+  3,037,584 generated  3,059,800 sent  0 DLQ  700 ev/s  2250 vehicles
+  3,044,490 generated  3,066,800 sent  0 DLQ  700 ev/s  2254 vehicles
+  3,051,393 generated  3,073,800 sent  0 DLQ  700 ev/s  2252 vehicles
+  3,058,319 generated  3,080,800 sent  0 DLQ  700 ev/s  2249 vehicles
+  3,065,243 generated  3,087,800 sent  0 DLQ  700 ev/s  2245 vehicles
+  3,072,147 generated  3,094,800 sent  0 DLQ  700 ev/s  2246 vehicles
+  3,079,059 generated  3,101,800 sent  0 DLQ  700 ev/s  2250 vehicles
+  3,085,980 generated  3,108,800 sent  0 DLQ  700 ev/s  2247 vehicles
+  3,092,872 generated  3,115,800 sent  0 DLQ  700 ev/s  2245 vehicles
+  3,099,812 generated  3,122,800 sent  0 DLQ  700 ev/s  2237 vehicles
+  3,106,723 generated  3,129,800 sent  0 DLQ  700 ev/s  2232 vehicles
+  3,113,633 generated  3,136,800 sent  0 DLQ  700 ev/s  2220 vehicles
+  3,120,552 generated  3,143,800 sent  0 DLQ  700 ev/s  2216 vehicles
+  3,126,677 generated  3,150,800 sent  0 DLQ  700 ev/s  2201 vehicles
+{
+  "run_id": "api-live-20261026T004931Z",
+  "mode": "api",
+  "channel": "live",
+  "measured": true,
+  "dry_run": false,
+  "target_rate_eps": 700.0,
+  "wall_clock_limit_min": 75.0,
+  "files_written": null,
+  "vehicles": 5000,
+  "simulated_hours": 96.0,
+  "workers": 16,
+  "events_generated": 3126677,
+  "events_sent": 3157802,
+  "events_dlq": 0,
+  "retries": 0,
+  "duration_s": 4511.1,
+  "events_per_s": 700.0,
+  "anomaly_episodes": {
+    "cold_chain_breach": 171,
+    "excessive_idling": 391,
+    "route_deviation": 281
+  },
+  "bad_data_events": {
+    "duplicate": 31125,
+    "impossible_value": 6230,
+    "late_event": 9353,
+    "malformed_json": 9324,
+    "missing_field": 12372,
+    "null_required": 12448,
+    "wrong_type": 9196
+  },
+  "machine": {
+    "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+    "processor": "arm",
+    "cpu_count": 10,
+    "python": "3.13.13"
+  }
+}
+GENERATOR EXIT 0 at 02:08:57
+drain check: kafka lag 502
+drain check: kafka lag 0
+DONE at 02:09:09

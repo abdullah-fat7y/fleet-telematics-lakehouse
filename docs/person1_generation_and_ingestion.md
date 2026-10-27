@@ -2,6 +2,9 @@
 
 Owner: Person 1 · Status as of 2026-10-23 · Platform: Microsoft Fabric (workspace `Fleet_Telematics_Project`)
 
+> **v2 (2026-10-26):** API + PostgreSQL + Kafka source system and the guide's data volumes - see
+> [person1_v2_source_system.md](person1_v2_source_system.md). Everything below describes the pilot, which stays in place.
+
 This document explains what was built for the first stage of the pipeline (generator -> bronze),
 describes every dataset (metadata / data dictionary), lists what the other stages need from it,
 and records what we noticed in the data that matters for the KPIs.

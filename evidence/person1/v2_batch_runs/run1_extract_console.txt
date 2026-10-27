@@ -1,0 +1,46 @@
+initial extract x20261025T233909Z-863cad: 18 hour slice(s)
+  2026-11-02 06:00   202,886 rows (2820 rejected)   38.2 s
+  upload failed (ServiceResponseError); retry 1/4 in 1s
+  upload failed (ServiceResponseError); retry 2/4 in 2s
+  upload failed (ServiceResponseError); retry 3/4 in 4s
+  upload failed (ServiceResponseError); retry 4/4 in 8s
+  upload failed for part-x20261025T233909Z-863cad.jsonl.gz: ('Connection aborted.', TimeoutError('The write operation timed out')) (will retry next round)
+Traceback (most recent call last):
+  File "/Users/shahy/Desktop/SIC GRADUATION PROJECT/repo/platform/extractor/extract.py", line 128, in <module>
+    main()
+    ~~~~^^
+  File "/Users/shahy/Desktop/SIC GRADUATION PROJECT/repo/platform/extractor/extract.py", line 114, in main
+    rows, rej = extract_hour(conn, fs, root, extract_id, hour, mode, cfg["streaming"]["retry_delays_s"],
+                ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+                             crash_midway=args.fail_after is not None and i == args.fail_after)
+                             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/Users/shahy/Desktop/SIC GRADUATION PROJECT/repo/platform/extractor/extract.py", line 84, in extract_hour
+    raise RuntimeError(f"upload failed for {rel}; hour stays 'started' and is retried next run")
+RuntimeError: upload failed for event_date=2026-11-02/event_hour=07/part-x20261025T233909Z-863cad.jsonl.gz; hour stays 'started' and is retried next run
+incremental extract x20261025T235456Z-af5e73: 17 hour slice(s)
+  2026-11-02 07:00   527,925 rows (7226 rejected)   66.5 s
+  2026-11-02 08:00   484,614 rows (6660 rejected)   53.3 s
+  2026-11-02 09:00   472,621 rows (6544 rejected)   50.6 s
+  2026-11-02 10:00   424,918 rows (5838 rejected)   46.3 s
+  2026-11-02 11:00   327,249 rows (4495 rejected)   34.4 s
+  2026-11-02 12:00   287,814 rows (3974 rejected)   33.2 s
+  2026-11-02 13:00   276,334 rows (3765 rejected)   37.1 s
+  2026-11-02 14:00   270,649 rows (3659 rejected)   35.5 s
+  2026-11-02 15:00   223,447 rows (3162 rejected)   29.4 s
+  2026-11-02 16:00   169,645 rows (2449 rejected)   21.9 s
+  2026-11-02 17:00   130,805 rows (1775 rejected)   19.6 s
+  2026-11-02 18:00    98,134 rows (1397 rejected)   15.5 s
+  2026-11-02 19:00    63,031 rows (854 rejected)   11.6 s
+  2026-11-02 20:00    26,633 rows (362 rejected)    2.9 s
+  2026-11-02 21:00    17,892 rows (242 rejected)    2.2 s
+  2026-11-02 22:00     8,827 rows (121 rejected)    1.3 s
+  2026-11-02 23:00       773 rows (10 rejected)    0.6 s
+{
+  "extract_id": "x20261025T235456Z-af5e73",
+  "mode": "incremental",
+  "hours": 17,
+  "rows": 3811311,
+  "rejected": 52533,
+  "duration_s": 461.8,
+  "rows_per_s": 8252.5
+}

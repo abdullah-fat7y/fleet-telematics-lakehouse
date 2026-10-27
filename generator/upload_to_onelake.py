@@ -34,7 +34,9 @@ def connect(cfg):
     except Exception:
         cred = InteractiveBrowserCredential(tenant_id=tenant)
     oc = cfg["onelake"]
-    fs = DataLakeServiceClient(oc["account_url"], credential=cred).get_file_system_client(oc["workspace"])
+    # Generous timeouts: on a slow home connection a 4 MB chunk can take a while.
+    fs = DataLakeServiceClient(oc["account_url"], credential=cred, connection_timeout=60,
+                               read_timeout=600).get_file_system_client(oc["workspace"])
     return fs, f"{oc['lakehouse']}.Lakehouse/Files"
 
 
@@ -43,7 +45,8 @@ def upload(fs, local_path, remote_path, delays):
         try:
             tmp = fs.get_file_client(remote_path + ".uploading")
             with open(local_path, "rb") as f:
-                tmp.upload_data(f, overwrite=True)
+                # 4 MB chunks, 4 in parallel: a large file never depends on one long request.
+                tmp.upload_data(f, overwrite=True, chunk_size=4 * 1024 * 1024, max_concurrency=4)
             tmp.rename_file(f"{fs.file_system_name}/{remote_path}")
             return True
         except Exception as exc:

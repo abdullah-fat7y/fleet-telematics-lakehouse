@@ -1,0 +1,19 @@
+=== RUN 2: incremental #1
+--- new data arrives (2026-11-03 06:00-07:00) via API
+api run api-history-20261026T001356Z: 5000 vehicles, simulated h 54.0-55.0, 16 workers
+  "events_generated": 291031,
+  "events_sent": 293897,
+  "duration_s": 14.7,
+--- extractor --incremental
+--- loader (notebook 08 via Fabric API)
+(eval):1: no such file or directory: ../../generator/.venv/bin/python
+--- extractor --incremental
+incremental extract x20261026T001805Z-e0a87e: 1 hour slice(s)
+  2026-11-03 12:00   293,897 rows (4019 rejected)   42.2 s
+  "rows": 293897,
+--- loader (notebook 08 via Fabric API)
+started 08_load_landing_v2 (job 4a43499a-6c59-44f0-9f46-0698e35bb900)
+     81 s  Failed
+08_load_landing_v2 Failed: {'requestId': 'd6a30f1e-dc7e-4752-96f7-5c0bfaab4c39', 'message': "Exception: Failed to create Livy session for executing notebook. Error: [TooManyRequestsForCapacity] [TooManyRequestsForCapacity] HTTP Response code 430: This Spark job can't be run because you've hit spark overall capacity compute limit. To proceed, cancel an active Spark job through the Monitoring hub, choose a larger capacity SKU, or try again later. For more visibility and control, go to Workspace settings → Job management (Job Concurrency & Queue Monitoring) to review running and queued Spark jobs, understand capacity contention, and take action as needed. [Learn more at 'https://go.microsoft.com/fwlink/?linkid=2356970&clcid=0x409']. HTTP status code: 430.\nException: Failed to create Livy session for executing notebook. Error: [TooManyRequestsForCapacity] [TooManyRequestsForCapacity] HTTP Response code 430: This Spark job can't be run because you've hit spark overall capacity compute limit. To proceed, cancel an active Spark job through the Monitoring hub, choose a larger capacity SKU, or try again later", 'isRetriable': False}
+started 08_load_landing_v2 (job 4bd2ae1d-0c9b-4a63-bb80-1bbf20205b86)
+     96 s  Completed

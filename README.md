@@ -24,6 +24,7 @@ generator -> Eventstream -> bronze -> (Spark) silver -> (warehouse) gold -> Powe
 
 ## Documentation
 
+- [Person 1 - v2 source system (API, PostgreSQL, Kafka to Fabric)](docs/person1_v2_source_system.md)
 - [Person 1 - data generation and ingestion](docs/person1_generation_and_ingestion.md): what was built, data dictionary, KPI observations, orchestration needs
 
 ## Quick start (generator)
