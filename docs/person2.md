@@ -45,15 +45,16 @@ The processing pipeline covers:
 - Parsing raw JSON telemetry using an explicit schema.
 - Validating required fields and separating invalid records.
 - Preserving rejected records for investigation.
-- Removing duplicate records.
+- Removing duplicate records using record identifiers and telemetry business keys.
 - Deriving event dates and partitioning Silver data.
 - Enriching telemetry with vehicle reference attributes.
 - Calculating GPS distance, time gaps, and estimated vehicle speed.
 - Detecting operational anomalies using predefined rules.
 - Grouping related anomaly readings into episodes.
 - Processing new Bronze arrivals incrementally.
+- Preventing insertion of records whose identifiers already exist in Silver.
 - Comparing detected episodes with ground-truth anomaly groups.
-- Calculating precision, recall, and F1-score.
+- Calculating Precision, Recall, and F1-score.
 
 The final outputs provide a structured foundation for investigating fleet behavior, vehicle movement anomalies, engine conditions, cold-chain compliance, and prolonged idling.
 
@@ -64,12 +65,12 @@ The Silver Layer is responsible for improving the usability and reliability of r
 Its main goals are to:
 
 1. Convert semi-structured payloads into typed, structured records.
-2. prevent invalid records from silently entering the curated dataset.
+2. Prevent invalid records from silently entering the curated dataset.
 3. Preserve rejected records for troubleshooting and data quality analysis.
 4. Reduce duplicate records before performing sequential calculations.
 5. Add derived attributes required for analytical processing.
 6. Enrich telemetry with vehicle reference information.
-7. identify suspicious telemetry patterns through rule-based detection.
+7. Identify suspicious telemetry patterns through rule-based detection.
 8. Aggregate related anomaly readings into episode-level records.
 9. Support incremental ingestion of new data.
 10. Provide evaluation outputs that can be inspected through SQL.
@@ -81,26 +82,26 @@ Its main goals are to:
 | Schema parsing | Converts raw JSON payloads into structured telemetry fields. |
 | Data validation | Checks required fields and upstream validation status. |
 | Rejected records | Preserves invalid records and their rejection reasons. |
-| Deduplication | Removes repeated records using the configured identifier. |
+| Deduplication | Removes repeated records using configured identifiers and business keys. |
 | Silver storage | Persists cleaned telemetry in Delta format. |
 | Reference enrichment | Joins telemetry with vehicle reference data. |
 | Movement analytics | Calculates distance, elapsed time, and estimated speed. |
 | Anomaly detection | Identifies suspicious readings using business rules. |
 | Episode aggregation | Groups related anomalous readings into episodes. |
-| Incremental ingestion | Processes new data while avoiding previously inserted IDs. |
+| Incremental ingestion | Processes new data while filtering previously inserted IDs. |
 | Evaluation | Compares detected episodes with ground-truth episodes. |
 
 ### Processing outputs
 
 | Output table | Purpose |
 |---|---|
-| `silver_telemetry` | Stores the cleaned and structured telemetry dataset. |
+| `silver_telemetry` | Stores cleaned and structured telemetry. |
 | `silver_rejected` | Stores records that fail validation. |
 | `silver_telemetry_anomalies` | Stores telemetry records identified as anomalous. |
 | `silver_anomaly_episodes` | Stores grouped anomaly episodes and their summary attributes. |
-| `evaluation_metrics` | Stores the calculated evaluation metrics. |
+| `evaluation_metrics` | Stores calculated evaluation metrics. |
 
-The tables represent different stages and levels of the pipeline. In particular, an individual anomaly reading is not equivalent to an aggregated anomaly episode.
+An individual anomaly reading is not equivalent to an aggregated anomaly episode. The distinction is important when evaluating the detection system.
 
 ---
 
@@ -110,7 +111,7 @@ The Silver Layer follows a medallion-style processing architecture in which raw 
 
 ```mermaid
 flowchart TD
-    A["bronze_telemetry"] --> B["Incremental Bronze Read"]
+    A["bronze_telemetry_v2"] --> B["Streaming Read"]
     B --> C["Explicit JSON Schema Parsing"]
     C --> D["Structured Telemetry"]
 
@@ -120,40 +121,44 @@ flowchart TD
 
     G --> H[("silver_rejected")]
 
-    F --> I["Deduplication"]
-    I --> J["Event Date Derivation"]
-    J --> K[("silver_telemetry")]
+    F --> I["Micro-batch Deduplication"]
+    I --> J["Business-key Deduplication"]
+    J --> K["Existing ID Anti-Join"]
+    K --> L["Event Date Derivation"]
+    L --> M[("silver_telemetry")]
 
-    L[("ref_vehicles")] --> M["Broadcast Join"]
-    K --> M
+    M --> N["Vehicle Reference Enrichment"]
+    N --> O["Movement Analytics"]
+    O --> P["Anomaly Detection"]
+    P --> Q[("silver_telemetry_anomalies")]
 
-    M --> N["Movement Analytics"]
-    N --> O["Anomaly Detection"]
-    O --> P[("silver_telemetry_anomalies")]
+    Q --> R["Episode Aggregation"]
+    R --> S[("silver_anomaly_episodes")]
 
-    P --> Q["Episode Aggregation"]
-    Q --> R[("silver_anomaly_episodes")]
-
-    S[("telemetry_truth")] --> T["Evaluation Only"]
-    R --> U["Episode-Level Matching"]
-    T --> U
-    U --> V[("evaluation_metrics")]
+    T[("telemetry_truth")] --> U["Evaluation Only"]
+    S --> V["Episode-Level Matching"]
+    U --> V
+    V --> W[("evaluation_metrics")]
 ```
 
 ### Processing flow
 
-1. Read raw telemetry from Bronze.
-2. Parse JSON records using an explicit schema.
-3. Validate required telemetry fields.
-4. Persist rejected records separately.
-5. Deduplicate accepted records.
-6. Derive event dates and write the Silver table.
-7. Enrich telemetry with vehicle reference attributes.
-8. Calculate movement-related metrics.
-9. Apply anomaly detection rules.
-10. Aggregate related detections into episodes.
-11. Compare detected episodes with ground truth.
-12. Persist evaluation metrics for SQL inspection.
+1. Read Bronze telemetry from the Delta source.
+2. Process available input using a streaming query.
+3. Parse JSON payloads using an explicit schema.
+4. Convert event timestamps into timestamp values.
+5. Validate mandatory telemetry fields and upstream validity status.
+6. Persist rejected records separately.
+7. Remove duplicate record IDs within each micro-batch.
+8. Remove repeated vehicle and event-time combinations within the valid records.
+9. Identify records whose `db_id` does not already exist in Silver.
+10. Derive `event_date` and append new records to the Silver Delta table.
+11. Enrich telemetry with vehicle reference attributes.
+12. Calculate movement-related metrics.
+13. Apply anomaly detection rules.
+14. Aggregate related detections into episodes.
+15. Compare detected episodes with ground truth.
+16. Persist evaluation metrics for SQL inspection.
 
 ### Separation of detection and evaluation
 
@@ -161,11 +166,9 @@ The `telemetry_truth` dataset is used for evaluation only.
 
 It must not be used by the anomaly detection rules to determine which records should be flagged. Otherwise, the evaluation would no longer provide an independent assessment of the detection process.
 
-The intended flow is:
-
-- **Detection:** uses telemetry measurements and the implemented business rules.
-- **Episode aggregation:** groups related detections using the implemented grouping conditions.
-- **Evaluation:** compares detected episodes with the ground-truth episode groups.
+- **Detection:** uses telemetry measurements and implemented business rules.
+- **Episode aggregation:** groups related detections using the configured grouping conditions.
+- **Evaluation:** compares detected episodes with ground-truth episode groups.
 
 ---
 
@@ -173,7 +176,7 @@ The intended flow is:
 
 ### 4.1 Source table
 
-The primary input table is `bronze_telemetry`.
+The incremental streaming implementation reads from `bronze_telemetry_v2`.
 
 The Bronze layer contains raw telemetry payloads and ingestion metadata. Keeping the original payload allows malformed JSON and invalid records to be investigated without modifying the source data.
 
@@ -182,27 +185,54 @@ Relevant source fields include:
 | Field | Purpose |
 |---|---|
 | `raw` | Original telemetry payload as text. |
-| `db_id` | Record identifier used by the implemented deduplication logic. |
+| `db_id` | Record identifier used by deduplication and existing-ID checks. |
 | `source` | Ingestion source. |
-| `is_valid` | Upstream validation status, when available. |
+| `is_valid` | Upstream validation status. |
 | `reject_reason` | Upstream rejection reason, when available. |
-| `EventEnqueuedUtcTime` | Arrival timestamp used by the incremental processing logic. |
+| `EventEnqueuedUtcTime` | Source arrival timestamp. |
 | `event_id` | Telemetry event identifier. |
 | `vehicle_id` | Vehicle identifier. |
 | `trip_id` | Trip identifier. |
 | `event_time` | Time when the telemetry reading was recorded. |
 
-### 4.2 Why explicit schema parsing is important
+### 4.2 Explicit schema
 
-Telemetry data is received as semi-structured JSON. JSON fields are not automatically guaranteed to have the expected data types or to contain all required values.
+The implementation defines the expected telemetry structure using PySpark's `StructType` and `StructField`.
 
-An explicit schema describes the expected structure of the telemetry payload.
+```python
+from delta.tables import DeltaTable
+from pyspark.sql import functions as F
+from pyspark.sql.types import (
+    StructType,
+    StructField,
+    StringType,
+    DoubleType,
+    TimestampType,
+    IntegerType,
+    BooleanType
+)
 
-The notebook defines the expected fields using PySpark's `StructType` and `StructField`.
+telemetry_schema = StructType([
+    StructField("event_id", StringType(), True),
+    StructField("vehicle_id", StringType(), True),
+    StructField("trip_id", StringType(), True),
+    StructField("event_time", StringType(), True),
+    StructField("latitude", DoubleType(), True),
+    StructField("longitude", DoubleType(), True),
+    StructField("speed_kmh", DoubleType(), True),
+    StructField("rpm", IntegerType(), True),
+    StructField("engine_temp_c", DoubleType(), True),
+    StructField("fuel_rate_lph", DoubleType(), True),
+    StructField("odometer_km", DoubleType(), True),
+    StructField("cargo_temp_c", DoubleType(), True)
+])
+```
+
+### 4.3 Schema field definitions
 
 | Field | Data type | Description |
 |---|---|---|
-| `event_id` | String | Unique event identifier. |
+| `event_id` | String | Telemetry event identifier. |
 | `vehicle_id` | String | Vehicle identifier. |
 | `trip_id` | String | Associated trip. |
 | `event_time` | String before conversion | Original event timestamp. |
@@ -215,51 +245,87 @@ The notebook defines the expected fields using PySpark's `StructType` and `Struc
 | `odometer_km` | Double | Odometer reading in kilometers. |
 | `cargo_temp_c` | Double | Cargo temperature, when applicable. |
 
-Using an explicit schema makes the expected types clear and avoids depending entirely on automatic schema inference.
+The third argument of each `StructField` is set to `True`, meaning that the schema permits null values for the field. Mandatory-field validation is performed separately.
 
-It also allows downstream transformations to refer to known columns rather than repeatedly extracting values from raw JSON strings.
+### 4.4 Why explicit schema parsing is important
 
-### 4.3 Parsing approach
+Telemetry arrives as semi-structured JSON. JSON fields are not automatically guaranteed to have the expected data types or contain all required values.
 
-The notebook uses `from_json()` to convert the raw payload into a structured column.
+An explicit schema:
+
+- Defines the expected structure of the payload.
+- Specifies the data types used by downstream transformations.
+- Makes telemetry fields available as structured Spark columns.
+- Avoids relying entirely on automatic schema inference.
+- Helps separate parsing from validation.
+
+### 4.5 Reading the Bronze streaming source
 
 ```python
-df_parsed = df_bronze.withColumn(
-    "parsed_data",
-    from_json(col("raw"), telemetry_schema)
+df_bronze_stream = (
+    spark.readStream
+    .format("delta")
+    .option("ignoreChanges", "true")
+    .table("bronze_telemetry_v2")
 )
 ```
 
-In this expression:
+The code creates a streaming DataFrame from the Bronze Delta table.
 
-- `df_bronze` is the source DataFrame.
-- `withColumn()` adds or replaces a DataFrame column.
-- `from_json()` parses a JSON string using the supplied schema.
-- `col("raw")` references the original JSON payload.
-- `telemetry_schema` defines the expected JSON structure.
-- `parsed_data` contains the resulting structured value.
+| Operation | Purpose |
+|---|---|
+| `spark.readStream` | Creates a streaming read. |
+| `format("delta")` | Reads from a Delta source. |
+| `ignoreChanges` | Configures how changes to existing source data are handled. |
+| `table()` | Specifies the source table. |
 
-After parsing, the structured fields are selected alongside the required ingestion metadata.
+The option `ignoreChanges` should not be interpreted as a universal guarantee that all modifications to existing records will be emitted as new telemetry events.
 
-The event timestamp is subsequently converted to a timestamp type for time-based calculations.
+### 4.6 Parsing JSON inside each micro-batch
 
-**Important:** JSON parsing and data validation are separate operations. A record can be syntactically valid JSON but still contain missing or null mandatory fields.
+The parsing takes place inside the `foreachBatch` processing function:
 
-### 4.4 Incremental source filtering
+```python
+df_parsed = microBatchDF.withColumn(
+    "parsed_data",
+    F.from_json(F.col("raw"), telemetry_schema)
+).select(
+    F.col("db_id"),
+    F.col("source"),
+    F.col("is_valid"),
+    F.col("reject_reason"),
+    F.col("EventEnqueuedUtcTime"),
+    F.col("parsed_data.*")
+).withColumn(
+    "event_time",
+    F.col("event_time").cast(TimestampType())
+)
+```
 
-The notebook checks whether the Silver table exists and, when applicable, retrieves the latest processed arrival timestamp.
+The processing sequence is:
 
-Incoming Bronze records can then be filtered to arrivals newer than the stored watermark.
+1. Read the current micro-batch DataFrame.
+2. Parse the `raw` JSON payload using `F.from_json()`.
+3. Store the structured result in `parsed_data`.
+4. Select the ingestion metadata needed by downstream processing.
+5. Expand the parsed telemetry fields into individual columns.
+6. Convert `event_time` from its original string representation to a timestamp.
 
-Conceptually, this reduces the source records that need to be processed in each execution.
+The expanded DataFrame contains both source metadata and parsed telemetry fields.
 
-A strict timestamp comparison can skip records that share the exact same arrival timestamp as the watermark. A production implementation should use a deterministic composite watermark or an overlapping read window with idempotent deduplication.
+### 4.7 Parsing and validation are separate
+
+A record can be valid JSON but still have a missing `vehicle_id`, null coordinates, or an unusable timestamp.
+
+Conversely, malformed JSON can prevent the expected telemetry fields from being extracted correctly.
+
+Therefore, schema parsing is followed by explicit validation rather than treating successful parsing as proof of data quality.
 
 ### Evidence — Schema Parsing
 
 ![Bronze-to-Silver Schema Parsing](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/feat/silver_processing/evidence/person2/02_Bronze-to-Silver%20Incremental%20data%20Processing%20and%20Schema%20Parsing.png?raw=true)
 
-*Figure 1 — Explicit schema definition, incremental source filtering, and JSON parsing.*
+*Figure 1 — Explicit schema definition, incremental source reading, and JSON parsing.*
 
 ---
 
@@ -267,11 +333,9 @@ A strict timestamp comparison can skip records that share the exact same arrival
 
 ### 5.1 Validation objective
 
-A record being valid JSON does not guarantee that it contains the required telemetry values.
+The validation stage prevents records that fail mandatory-field checks or upstream validation from entering the valid-record processing path.
 
-The validation stage checks mandatory fields before records are used for analytical processing.
-
-The implemented condition checks:
+The implemented validation checks:
 
 - `event_id`
 - `vehicle_id`
@@ -280,78 +344,128 @@ The implemented condition checks:
 - `longitude`
 - `speed_kmh`
 
-These fields are used by downstream processing, including vehicle identification, time ordering, GPS calculations, and speed-related rules.
+These fields support event identification, vehicle grouping, timestamp ordering, GPS calculations, and movement analysis.
 
 ### 5.2 Validation condition
 
 ```python
 validation_condition = (
-    col("event_id").isNotNull()
-    & col("vehicle_id").isNotNull()
-    & col("event_time").isNotNull()
-    & col("latitude").isNotNull()
-    & col("longitude").isNotNull()
-    & col("speed_kmh").isNotNull()
+    F.col("event_id").isNotNull() &
+    F.col("vehicle_id").isNotNull() &
+    F.col("event_time").isNotNull() &
+    F.col("latitude").isNotNull() &
+    F.col("longitude").isNotNull() &
+    F.col("speed_kmh").isNotNull()
 )
 ```
 
-The condition combines individual null checks using the logical AND operator, `&`.
+The logical AND operator requires every listed field to be non-null for the condition to evaluate as true.
 
-A record satisfies this condition only when all listed fields are non-null.
+| Condition | Outcome |
+|---|---|
+| All required fields are non-null | Passes the required-field check. |
+| `event_id` is null | Fails validation. |
+| `vehicle_id` is null | Fails validation. |
+| `event_time` is null | Fails validation. |
+| `latitude` is null | Fails validation. |
+| `longitude` is null | Fails validation. |
+| `speed_kmh` is null | Fails validation. |
 
-For example:
+This condition checks for null values. It does not independently verify that coordinates are within geographic bounds or that speed values are physically plausible.
 
-| event_id | vehicle_id | event_time | latitude | longitude | speed_kmh | Result |
-|---|---|---|---:|---:|---:|---|
-| Present | Present | Present | Present | Present | Present | Passes required-field condition |
-| Present | Present | Present | Null | Present | Present | Fails validation |
-| Present | Null | Present | Present | Present | Present | Fails validation |
-| Present | Present | Null | Present | Present | Present | Fails validation |
+### 5.3 Deduplication before validation output
 
-These examples illustrate the required-field condition. The complete accepted/rejected outcome also depends on the upstream validity status used by the notebook.
+The micro-batch records are deduplicated by `db_id` before the valid and rejected datasets are created:
 
-### 5.3 Accepted and rejected records
+```python
+df_deduplicated_mb = df_parsed.dropDuplicates(["db_id"])
+```
 
-Accepted records must satisfy the required-field condition and the upstream validation status used by the notebook.
+This means that the rejected-record path and valid-record path both operate on the micro-batch DataFrame after this `db_id` deduplication step.
 
-Rejected records are selected when the upstream validity flag is false or the required-field condition fails.
+### 5.4 Rejected-record condition
 
-This separates the processing paths:
+```python
+df_rejected = df_deduplicated_mb.filter(
+    (F.col("is_valid") == False) |
+    (~validation_condition)
+).withColumn(
+    "rejection_reason",
+    F.coalesce(
+        F.col("reject_reason"),
+        F.lit(
+            "missing mandatory fields (null keys/coords/speed)"
+        )
+    )
+).withColumn(
+    "rejected_at",
+    F.current_timestamp()
+)
+```
 
-- Valid records continue into deduplication and Silver processing.
-- Rejected records are preserved for inspection and data quality analysis.
+The rejection condition uses logical OR.
 
-### 5.4 Rejection reason handling
+A record enters the rejected dataset when either:
 
-The notebook assigns a rejection reason using the existing reason when available.
+1. Its upstream `is_valid` flag is explicitly false.
+2. The required-field validation condition fails.
 
-Otherwise, it supplies a fallback reason indicating that mandatory fields are missing or null.
+The rejection reason is constructed using `F.coalesce()`.
 
-A rejection timestamp is also recorded to support auditing and investigation.
+`coalesce()` returns the first non-null expression. In this implementation, the original `reject_reason` is preserved when available; otherwise, the fallback text is used.
 
-Preserving the reason makes it easier to distinguish between upstream validation failures and records that fail the downstream mandatory-field checks.
+The `rejected_at` field records the timestamp at which the rejection transformation is evaluated.
 
-### 5.5 Rejected records table
+### 5.5 Persisting rejected records
 
-Invalid records are persisted to `silver_rejected`.
+```python
+if not df_rejected.isEmpty():
+    df_rejected.write.format("delta") \
+        .mode("append") \
+        .option("mergeSchema", "true") \
+        .saveAsTable("silver_rejected")
+```
 
-The table retains relevant telemetry fields and rejection metadata, including:
+The write is performed only when the rejected DataFrame is not empty.
 
-- Record ID.
-- Source.
-- Validation status.
-- Rejection reason.
-- Event timestamp.
-- Vehicle information.
-- Rejection timestamp.
+The dataset is written in Delta format using append mode, so rejected records from the current micro-batch are added to the target table rather than replacing its existing data.
 
-This approach preserves rejected data instead of silently discarding it.
+The `mergeSchema` option permits schema evolution according to the applicable Delta write behavior.
 
-The rejected dataset can be inspected to identify recurring data quality problems and investigate why records did not enter the curated Silver dataset.
+### 5.6 Valid-record condition
 
-### 5.6 Validation output
+```python
+df_valid = df_deduplicated_mb.filter(
+    (F.col("is_valid") == True) & validation_condition
+)
+```
 
-The captured notebook output shows:
+A record enters `df_valid` only when:
+
+- The upstream validity flag is explicitly true.
+- Every mandatory field passes the required-field condition.
+
+A record with an upstream validity flag of null is not selected by this expression because null is not equal to `True`.
+
+### 5.7 Rejected-record table
+
+The target table is `silver_rejected`.
+
+Its purpose is to preserve records that fail validation for further investigation.
+
+The rejected output includes source metadata, parsed telemetry fields, a rejection reason, and a rejection timestamp.
+
+Preserving rejected data supports:
+
+- Data quality investigations.
+- Identification of recurring missing fields.
+- Analysis of upstream validation failures.
+- Review of malformed or incomplete telemetry.
+- Troubleshooting without silently discarding source records.
+
+### 5.8 Validation count reconciliation
+
+The captured notebook output reports:
 
 | Metric | Reported count |
 |---|---:|
@@ -359,7 +473,9 @@ The captured notebook output shows:
 | Total rejected | 1,134,475 |
 | Total valid | 8,146,714 |
 
-**Count reconciliation note:** these values do not reconcile arithmetically. The valid and rejected counts sum to more than the reported parsed count. The counts should be rechecked against the corresponding DataFrames and filters before being presented as a reconciled data-quality summary.
+These values do not reconcile arithmetically because the reported valid and rejected counts sum to more than the reported parsed count.
+
+The counts should be rechecked against the corresponding DataFrames and filters before being presented as a reconciled data-quality summary.
 
 ### Evidence — Validation
 
@@ -377,123 +493,142 @@ Duplicate telemetry records can inflate row counts and distort analytical calcul
 
 Duplicates may occur because of repeated delivery, retries, replay operations, or overlapping ingestion windows.
 
-Removing duplicates before downstream analytics helps prevent repeated records from unnecessarily affecting the results.
+The streaming implementation uses two different deduplication operations, each with a different purpose.
 
-### 6.2 Deduplication implementation
-
-The implemented notebook removes repeated `db_id` values:
+### 6.2 First level: micro-batch record ID deduplication
 
 ```python
-df_deduplicated = df_valid.dropDuplicates(["db_id"])
+df_deduplicated_mb = df_parsed.dropDuplicates(["db_id"])
 ```
 
-Here:
+This removes repeated `db_id` values within the current micro-batch.
 
-- `df_valid` represents the valid-record DataFrame.
-- `dropDuplicates(["db_id"])` removes rows with repeated values in the selected identifier column.
-- `df_deduplicated` contains the result of that operation.
+The operation ensures that multiple rows with the same selected ID do not proceed separately through the subsequent valid and rejected record paths.
 
-The operation is based on `db_id`. It does not automatically guarantee uniqueness under every other possible business key.
+It does not, by itself, eliminate repeated IDs across different micro-batches.
 
-### 6.3 Deduplication counts
-
-The notebook calculates the number of valid records before and after deduplication.
+### 6.3 Second level: vehicle and event-time deduplication
 
 ```python
-valid_count = df_valid.count()
-deduped_count = df_deduplicated.count()
-
-duplicates_removed = valid_count - deduped_count
+df_valid_clean = (
+    df_valid
+    .dropDuplicates(["vehicle_id", "event_time"])
+    .withColumn(
+        "event_date",
+        F.to_date(F.col("event_time"))
+    )
+)
 ```
 
-The difference between the two counts represents the number of rows removed by this deduplication operation.
+This operation removes duplicate combinations of `vehicle_id` and `event_time` from the valid records in the current micro-batch.
 
-The captured output reports:
+The two deduplication keys serve different purposes:
 
-| Metric | Value |
-|---|---:|
-| Valid records before deduplication | 8,146,714 |
-| Duplicates removed | 0 |
-| Clean deduplicated records | 8,146,714 |
+| Key | Purpose |
+|---|---|
+| `db_id` | Removes repeated record IDs within a micro-batch. |
+| `vehicle_id`, `event_time` | Removes repeated vehicle/time combinations within the valid micro-batch records. |
 
-These values are reported for the captured execution. Zero removed duplicates means that no repeated `db_id` values were removed by this operation. It does not prove that there are no duplicates under every possible business key.
+The second operation is applied after the first validation filter.
 
-### 6.4 Business-key consideration
+Because `dropDuplicates()` does not specify a rule for choosing between conflicting rows with the same key, it should not be assumed to retain a particular version when the other columns differ.
 
-The upstream project documentation identifies `vehicle_id + event_time` as the telemetry business key, whereas the implemented Silver notebook uses `db_id`.
-
-These identifiers should not be treated as interchangeable without verification.
-
-The deduplication policy should define how repeated deliveries, replayed events, and repeated business measurements are distinguished.
-
-The chosen key affects what the pipeline considers a duplicate. Two records may have different database IDs but still represent the same vehicle measurement.
-
-### 6.5 Event date derivation
-
-The notebook derives a date attribute from the event timestamp:
+### 6.4 Event date derivation
 
 ```python
-df_silver_clean = df_deduplicated.withColumn(
+.withColumn(
     "event_date",
-    to_date(col("event_time"))
+    F.to_date(F.col("event_time"))
 )
 ```
 
-The expression creates an `event_date` column based on `event_time`.
+The event timestamp is converted into a date column.
 
-This date attribute is used to organize the Silver data into date-based partitions.
+The resulting `event_date` is used as the partitioning column when new records are written to the Silver table.
 
-### 6.6 Delta table persistence
-
-The notebook writes the cleaned dataset to the `silver_telemetry` table:
+### 6.5 Checking whether the Silver table exists
 
 ```python
-(
-    df_silver_clean.write
-    .format("delta")
-    .mode("overwrite")
-    .option("overwriteSchema", "true")
-    .partitionBy("event_date")
-    .saveAsTable("silver_telemetry")
+if spark.catalog.tableExists("silver_telemetry"):
+    silver_existing = (
+        spark.read.table("silver_telemetry")
+        .select("db_id")
+    )
+```
+
+Before attempting the existing-ID comparison, the notebook checks whether `silver_telemetry` exists in the Spark catalog.
+
+When the table exists, it reads the existing `db_id` values.
+
+This provides the set of identifiers used to determine whether a valid record has already been inserted into Silver.
+
+### 6.6 Left-anti join
+
+```python
+new_valid_records = df_valid_clean.join(
+    silver_existing,
+    on="db_id",
+    how="left_anti"
 )
 ```
 
-The main operations are:
+A left-anti join returns rows from the left DataFrame that have no matching join key in the right DataFrame.
+
+In this case:
+
+- The left DataFrame contains valid, deduplicated records from the current micro-batch.
+- The right DataFrame contains IDs already present in `silver_telemetry`.
+- The join key is `db_id`.
+- The result contains records whose `db_id` does not already exist in the Silver table.
+
+If the Silver table does not exist, the notebook uses `df_valid_clean` directly as `new_valid_records`.
+
+### 6.7 Appending new records
+
+```python
+if not new_valid_records.isEmpty():
+    new_valid_records.write \
+        .format("delta") \
+        .mode("append") \
+        .option("mergeSchema", "true") \
+        .partitionBy("event_date") \
+        .saveAsTable("silver_telemetry")
+```
+
+The output is appended only when the new-record DataFrame is not empty.
 
 | Operation | Purpose |
 |---|---|
-| `format("delta")` | Writes the output using the Delta table format. |
-| `mode("overwrite")` | Replaces the existing table data under the configured write behavior. |
-| `overwriteSchema` | Allows the output schema to be overwritten. |
-| `partitionBy("event_date")` | Organizes the table by event date. |
-| `saveAsTable()` | Persists the result as a named table. |
+| `isEmpty()` | Checks whether there are records to write. |
+| `format("delta")` | Writes the output in Delta format. |
+| `mode("append")` | Adds new records without intentionally replacing existing table data. |
+| `mergeSchema` | Allows supported schema evolution during the write. |
+| `partitionBy("event_date")` | Organizes the output by event date. |
+| `saveAsTable()` | Writes to the named Silver table. |
 
-The captured execution confirms that `silver_telemetry` was rewritten and updated.
+### 6.8 Incremental deduplication limitations
 
-The use of `overwrite` represents a full-refresh write. It is distinct from the append-based incremental streaming implementation described later.
+The two `dropDuplicates()` calls operate on the current micro-batch. The left-anti join then checks whether each candidate `db_id` already exists in Silver.
 
-### 6.7 Why partition by event date?
+This prevents existing IDs from being selected by the anti-join under the normal single-writer assumptions.
 
-Date-based partitioning can improve queries that filter by event date and helps organize telemetry for historical analysis.
+However, the approach is not a universal exactly-once guarantee. Concurrent writers, retries, changes to existing records, or differences between the deduplication keys can affect the result.
 
-For example, a query restricted to a specific event date may be able to avoid scanning data from unrelated date partitions.
+The `vehicle_id` and `event_time` deduplication is also applied within the current micro-batch; the existing-table comparison checks `db_id`, not the vehicle/time business key.
 
-The actual performance benefit depends on:
+### 6.9 Why partition by event date?
 
-- Data volume.
-- Number of partitions.
-- Partition sizes.
-- File sizes.
-- Query filtering patterns.
-- The physical layout of the stored data.
+Date-based partitioning organizes the Silver dataset for historical analysis.
 
-Partitioning is not automatically faster for every query. Very small partitions or excessive numbers of partitions can introduce overhead.
+Queries that filter on `event_date` may benefit because Spark can potentially skip partitions that do not match the query filter.
+
+Actual performance depends on data volume, partition sizes, file sizes, and query patterns.
 
 ### Evidence — Deduplication and Partitioning
 
 ![Silver Deduplication and Partitioning](https://raw.githubusercontent.com/abdullah-fat7y/fleet-telematics-lakehouse/feat/silver_processing/evidence/person2/04_Silver%20Layer%20Deduplication%20and%20Date-Based%20Partitioning.png)
 
-*Figure 3 — Duplicate-count calculation, event date derivation, and Delta table persistence.*
+*Figure 3 — Deduplication, event date derivation, and Delta table persistence.*
 
 ---
 
@@ -501,11 +636,11 @@ Partitioning is not automatically faster for every query. Very small partitions 
 
 ### 7.1 Objective
 
-The telemetry table contains vehicle measurements, while `ref_vehicles` provides additional information about each vehicle.
+The telemetry dataset contains vehicle measurements, while `ref_vehicles` provides additional information about each vehicle.
 
-Enrichment combines the telemetry dataset with the vehicle reference dataset so that vehicle attributes can be available during downstream analysis.
+Enrichment combines telemetry with vehicle reference attributes so that downstream processing can use the available vehicle metadata.
 
-The notebook joins the datasets using `vehicle_id`.
+The join is performed using `vehicle_id`.
 
 ### 7.2 Broadcast left join
 
@@ -519,36 +654,34 @@ df_enriched = df_silver.join(
 )
 ```
 
-The code performs the following operations:
+The implementation:
 
 1. Reads the vehicle reference table.
-2. Applies the broadcast hint to the reference DataFrame.
-3. Joins the telemetry and reference DataFrames using `vehicle_id`.
-4. Uses a left join to preserve telemetry records even when no reference row matches.
+2. Applies a broadcast hint to the reference DataFrame.
+3. Joins the telemetry and reference DataFrames on `vehicle_id`.
+4. Uses a left join to preserve telemetry records without a matching reference row.
 
 ### 7.3 Why use a broadcast join?
 
-A broadcast join can reduce shuffle overhead when one side of the join is sufficiently small.
+A broadcast join can reduce shuffle overhead when the reference dataset is sufficiently small to be distributed efficiently to Spark executors.
 
-Without broadcasting, Spark may need to redistribute data across workers to perform the join. Broadcasting can make the reference data available to executors so that a large telemetry dataset does not need the same type of redistribution.
+Without broadcasting, Spark may need to redistribute data across workers to perform the join. Broadcasting can make the reference data available to executors without the same type of shuffle for the join.
 
-However, broadcasting is appropriate only when the reference dataset can fit comfortably in the available memory. The hint does not make an oversized dataset safe to broadcast.
+The reference dataset must fit comfortably within available executor memory. A broadcast hint does not make an oversized dataset safe to broadcast.
 
 ### 7.4 Why use a left join?
 
-The left join preserves records from the telemetry DataFrame.
+A left join preserves telemetry records even when their `vehicle_id` has no matching entry in `ref_vehicles`.
 
-If a telemetry record does not have a matching `vehicle_id` in `ref_vehicles`, the telemetry record can still remain in the result, with reference-side columns null.
-
-This helps avoid silently removing telemetry observations simply because reference metadata is missing.
+In such cases, the reference-side attributes can be null rather than causing the telemetry record to disappear from the result.
 
 ### 7.5 Fallback behavior
 
 The notebook includes exception handling that falls back to the original Silver DataFrame if the reference read or join fails.
 
-This allows processing to continue, but the output may lack reference attributes.
+This allows processing to continue, but the resulting DataFrame may lack reference attributes.
 
-In production, this condition should be logged and monitored rather than treated as a fully successful enrichment.
+In production, the fallback should be logged and monitored rather than treated as a fully successful enrichment.
 
 ### Evidence — Broadcast Join
 
@@ -564,7 +697,7 @@ In production, this condition should be logged and monitored rather than treated
 
 Vehicle movement analytics derives information from sequential telemetry readings.
 
-The notebook compares consecutive GPS observations for each vehicle to calculate the distance traveled between readings, the elapsed time, and the estimated speed.
+The notebook compares consecutive GPS observations for each vehicle to calculate distance, elapsed time, and estimated speed.
 
 These derived measurements support the identification of suspicious GPS jumps and other movement-related conditions.
 
@@ -580,9 +713,9 @@ window_spec = (
 
 The window partitions events by `vehicle_id` and orders them by `event_time`.
 
-This establishes an event sequence for each vehicle.
+This establishes a chronological event sequence for each vehicle.
 
-The window is important because the previous reading for one vehicle must not be confused with the previous reading for another vehicle.
+Partitioning by vehicle prevents the previous reading of one vehicle from being treated as the previous reading of another vehicle.
 
 ### 8.3 Retrieve previous reading values
 
@@ -606,15 +739,13 @@ df_windowed = (
 
 The `lag()` function retrieves a value from a preceding row in the ordered window.
 
-The new columns represent:
-
 | Column | Purpose |
 |---|---|
 | `prev_latitude` | Latitude of the previous reading for the vehicle. |
 | `prev_longitude` | Longitude of the previous reading for the vehicle. |
 | `prev_event_time` | Timestamp of the previous reading for the vehicle. |
 
-The first reading for each vehicle does not have a previous reading, so the previous values are null.
+The first reading for each vehicle has no preceding reading, so the previous values are null.
 
 ### 8.4 Calculate the time gap
 
@@ -626,13 +757,11 @@ df_windowed = df_windowed.withColumn(
 )
 ```
 
-The expression converts the timestamps to Unix timestamps and subtracts the previous timestamp from the current timestamp.
+The current and previous timestamps are converted to Unix timestamps and subtracted.
 
 The resulting `time_gap_sec` represents the elapsed time between consecutive readings in seconds.
 
-A positive time gap is required for a meaningful speed calculation.
-
-Zero or negative gaps can occur when timestamps are repeated or improperly ordered. These cases need to be handled explicitly to avoid invalid speed calculations.
+A positive time gap is required for a meaningful speed calculation. Repeated timestamps or out-of-order readings can produce zero or negative gaps and require explicit handling.
 
 ### 8.5 Haversine distance
 
@@ -661,17 +790,7 @@ Where:
 
 The notebook uses the calculated distance to derive `distance_km`.
 
-### 8.6 Why distance must be combined with time
-
-Distance alone does not indicate how quickly a vehicle moved.
-
-The elapsed time between the GPS readings is needed to calculate an average speed over that interval.
-
-For example, the same distance can correspond to very different speeds depending on whether it was covered over a few seconds or several minutes.
-
-### 8.7 Calculated speed
-
-The calculated speed is expressed in kilometers per hour:
+### 8.6 Calculated speed
 
 \[
 \text{Speed (km/h)}
@@ -679,13 +798,13 @@ The calculated speed is expressed in kilometers per hour:
 \frac{\text{Distance (km)}}{\text{Time Gap (seconds)}/3600}
 \]
 
-This converts the time gap from seconds to hours before dividing the distance by the elapsed time.
+The time gap is converted from seconds to hours before calculating the average speed.
 
 The implementation calculates speed when the time gap is valid and positive. Otherwise, it uses a zero fallback.
 
 A zero fallback does not necessarily mean that the vehicle was physically stationary; it may indicate that a valid calculation was unavailable.
 
-### 8.8 Excessive idling
+### 8.7 Excessive idling
 
 The implemented idling indicator combines:
 
@@ -694,19 +813,15 @@ The implemented idling indicator combines:
 
 This identifies a low-speed reading while the engine is running, assuming the telemetry measurements are reliable.
 
-The two conditions are used together because low vehicle speed alone does not establish that the engine is idling. The RPM condition supplies additional context about engine activity.
+Low speed alone does not establish that the engine is idling. The RPM condition provides additional information about engine activity.
 
-The resulting flag is useful for identifying potential prolonged-idling episodes after related readings are grouped.
+### 8.8 Cold-chain monitoring
 
-### 8.9 Cold-chain monitoring
+Cargo temperature is compared with the configured acceptable range to identify potential cold-chain violations.
 
-For temperature-sensitive transportation, cargo temperature is compared with the configured acceptable range.
+The supplied project documentation describes a 2°C–8°C range in the movement analytics section and a broader -2°C–12°C range in the anomaly detection section. The exact threshold used by the executed implementation should be confirmed before treating these ranges as equivalent.
 
-The notebook flags cargo temperatures outside the allowed range of 2°C–8°C in the movement analytics description.
-
-The later anomaly detection description also specifies a broader -2°C–12°C range. These are different thresholds in the supplied documentation and should be verified against the actual notebook implementation before being treated as the same rule.
-
-Null cargo temperatures must be interpreted according to vehicle type because dry vans can legitimately have no cargo-temperature reading.
+Null cargo temperatures must also be interpreted according to vehicle type because some vehicles may legitimately lack cargo-temperature readings.
 
 ### Evidence — Movement Analytics
 
@@ -720,8 +835,6 @@ Null cargo temperatures must be interpreted according to vehicle type because dr
 
 The notebook identifies suspicious readings using deterministic rules.
 
-Each rule checks a telemetry attribute or a previously calculated flag.
-
 | Anomaly | Implemented condition | Purpose |
 |---|---|---|
 | GPS teleportation | `calculated_speed_kmh > 200` | Identifies implausibly high GPS-derived speed. |
@@ -732,59 +845,41 @@ Each rule checks a telemetry attribute or a previously calculated flag.
 
 ### 9.1 GPS teleportation
 
-A calculated speed above 200 km/h can indicate:
-
-- Incorrect GPS coordinates.
-- Corrupted or inconsistent timestamps.
-- Out-of-order readings.
-- An implausible movement interval.
-- A GPS-derived distance that does not reflect actual vehicle movement.
+A calculated speed above 200 km/h can indicate incorrect coordinates, corrupted timestamps, out-of-order readings, or implausible movement.
 
 The rule uses GPS-derived speed rather than only the reported vehicle speed.
-
-This distinction matters because the reported speed and the speed calculated from sequential GPS positions are different measurements.
-
-A large disagreement between them can be useful for further investigation.
 
 ### 9.2 Engine overheating
 
 The notebook flags an engine temperature above 105°C.
 
-This is a configured detection rule. It does not independently prove mechanical failure, since the interpretation of engine temperature depends on the vehicle and operating conditions.
+This is a configured detection threshold and does not independently prove mechanical failure.
 
 ### 9.3 RPM spike
 
 The notebook flags readings where RPM exceeds 4,500.
 
-This rule identifies a high engine-speed reading according to the configured threshold.
-
-It should be interpreted in the context of the relevant vehicle characteristics and operating conditions.
-
 ### 9.4 Cold-chain breach
 
 The rule identifies cargo-temperature readings outside the configured range.
 
-The supplied documentation describes both a 2°C–8°C range and a -2°C–12°C range in different sections. The precise range used by the executed code should be confirmed before reporting a single definitive threshold.
+The precise range should be verified against the executed notebook because the supplied documentation describes different temperature intervals in different sections.
 
 ### 9.5 Excessive idling
 
 The notebook uses the combination of reported speed below 2 km/h and positive RPM to identify an idling reading.
 
-Individual idling readings may be grouped into a longer episode when the readings satisfy the episode aggregation conditions.
-
 ### 9.6 Combined anomaly flag
 
-The notebook combines the individual Boolean conditions into an overall `is_anomaly` flag and assigns an `anomaly_type`.
+The notebook combines individual Boolean conditions into an overall `is_anomaly` flag and assigns an `anomaly_type`.
 
-When multiple conditions are true for the same reading, the order of the conditional branches determines which category is assigned if the output stores only one anomaly type.
-
-This matters when a reading satisfies more than one anomaly condition. A single assigned category may not capture every condition that was true.
+When multiple conditions are true for the same reading, the order of conditional branches determines which category is assigned if the output stores only one anomaly type.
 
 ### 9.7 Anomaly persistence
 
 Detected anomaly records are saved in `silver_telemetry_anomalies`.
 
-This table provides the input for SQL inspection and the subsequent episode aggregation stage.
+This table provides the input for SQL inspection and subsequent episode aggregation.
 
 ### Evidence — Anomaly Detection
 
@@ -802,9 +897,9 @@ A single operational anomaly may produce multiple consecutive readings.
 
 For example, a vehicle may remain idling across several telemetry events. Counting every reading as an independent incident would inflate the number of operational events.
 
-Episode aggregation groups related detections into a more meaningful event-level representation.
+Episode aggregation groups related detections into an event-level representation.
 
-This is important because the ground-truth evaluation uses episode-level groups rather than treating every reading as an independent incident.
+This is important because the evaluation uses episode-level ground-truth groups rather than treating every reading as an independent incident.
 
 ### 10.2 Episode window
 
@@ -816,9 +911,7 @@ episodes_window = (
 )
 ```
 
-This window groups readings by vehicle and anomaly type, then orders each group by event time.
-
-The purpose is to compare each anomalous reading with the preceding reading of the same type for the same vehicle.
+This window groups readings by vehicle and anomaly type, then orders them by event time.
 
 ### 10.3 Episode boundaries
 
@@ -833,27 +926,13 @@ new_episode_flag = (
 )
 ```
 
-The expression produces a Boolean indicator for whether the current reading begins a new episode.
-
-The first reading in a window has no previous timestamp and therefore starts an episode. A reading more than five minutes after the preceding anomalous reading also starts a new episode.
-
-### 10.4 Generating episode identifiers
-
 A cumulative sum of the episode-start flag is then used to generate episode identifiers.
 
-Conceptually:
-
-1. Sort anomalous readings by event time.
-2. Compare each reading with the preceding reading.
-3. Mark the first reading or a reading with a gap exceeding five minutes as a new episode.
-4. Accumulate the episode-start flags.
-5. Use the resulting identifier to group related readings.
-
-This approach groups nearby anomalous readings of the same type into a single episode.
+The logic groups nearby anomalous readings of the same type into a single episode.
 
 The five-minute threshold directly affects the episode count. Increasing or decreasing the threshold can merge or split episodes even if the underlying anomaly flags remain unchanged.
 
-### 10.5 Episode summary fields
+### 10.4 Episode summary fields
 
 | Field | Meaning |
 |---|---|
@@ -866,8 +945,6 @@ The five-minute threshold directly affects the episode count. Increasing or decr
 | `max_calculated_speed` | Maximum calculated speed within the episode. |
 | `duration_seconds` | Difference between the episode end and start timestamps. |
 
-The episode duration is calculated as:
-
 \[
 \text{Duration Seconds}
 =
@@ -876,9 +953,9 @@ The episode duration is calculated as:
 \text{Start Timestamp}
 \]
 
-A single-reading episode can have a calculated duration of zero seconds even if the actual real-world anomaly lasted longer. The recorded duration reflects the timestamps represented in the data, not necessarily the full physical duration of an incident.
+A single-reading episode can have a calculated duration of zero seconds even if the real-world anomaly lasted longer. The recorded duration reflects the timestamps represented in the data.
 
-### 10.6 Episode persistence
+### 10.5 Episode persistence
 
 The episode-level output is persisted in `silver_anomaly_episodes`.
 
@@ -896,141 +973,499 @@ This table is used for SQL inspection and downstream evaluation.
 
 ### 11.1 Objective
 
-The streaming notebook reads new Bronze records and appends only records whose identifiers do not already exist in Silver.
+The incremental streaming implementation processes available records from `bronze_telemetry_v2` and appends new valid records to `silver_telemetry`.
 
-This processing path is separate from the full-refresh overwrite operation described earlier.
+It also preserves rejected records in `silver_rejected`.
 
-The objective is to process newly available data without unnecessarily rewriting the entire Silver dataset during each incremental execution.
+The implementation uses `foreachBatch` so that each streaming micro-batch can be processed using regular PySpark DataFrame transformations and Delta table writes.
 
-### 11.2 Streaming source
+The main objectives are to:
+
+- Process available Bronze data incrementally.
+- Parse JSON payloads using the explicit telemetry schema.
+- Apply mandatory-field validation.
+- Preserve rejected records.
+- Deduplicate record IDs within each micro-batch.
+- Remove repeated vehicle and event-time combinations within valid records.
+- Exclude IDs that already exist in Silver.
+- Append new records using Delta Lake.
+- Record streaming progress through a checkpoint.
+
+### 11.2 Complete streaming implementation
+
+The following code is the streaming implementation used for the documented processing flow.
+
+```python
+from delta.tables import DeltaTable
+from pyspark.sql import functions as F
+from pyspark.sql.types import (
+    StructType,
+    StructField,
+    StringType,
+    DoubleType,
+    TimestampType,
+    IntegerType,
+    BooleanType
+)
+
+# ---------------------------------------------------------
+# 1. Define the expected telemetry JSON schema
+# ---------------------------------------------------------
+
+telemetry_schema = StructType([
+    StructField("event_id", StringType(), True),
+    StructField("vehicle_id", StringType(), True),
+    StructField("trip_id", StringType(), True),
+    StructField("event_time", StringType(), True),
+    StructField("latitude", DoubleType(), True),
+    StructField("longitude", DoubleType(), True),
+    StructField("speed_kmh", DoubleType(), True),
+    StructField("rpm", IntegerType(), True),
+    StructField("engine_temp_c", DoubleType(), True),
+    StructField("fuel_rate_lph", DoubleType(), True),
+    StructField("odometer_km", DoubleType(), True),
+    StructField("cargo_temp_c", DoubleType(), True)
+])
+
+# ---------------------------------------------------------
+# 2. Read the Bronze Delta table as a streaming source
+# ---------------------------------------------------------
+
+df_bronze_stream = (
+    spark.readStream
+    .format("delta")
+    .option("ignoreChanges", "true")
+    .table("bronze_telemetry_v2")
+)
+
+# ---------------------------------------------------------
+# 3. Process each streaming micro-batch
+# ---------------------------------------------------------
+
+def process_silver_streaming_microbatch(microBatchDF, batchId):
+
+    # Skip empty micro-batches
+    if microBatchDF.isEmpty():
+        return
+
+    # -----------------------------------------------------
+    # 3.1 Parse the raw JSON payload
+    # -----------------------------------------------------
+
+    df_parsed = (
+        microBatchDF
+        .withColumn(
+            "parsed_data",
+            F.from_json(
+                F.col("raw"),
+                telemetry_schema
+            )
+        )
+        .select(
+            F.col("db_id"),
+            F.col("source"),
+            F.col("is_valid"),
+            F.col("reject_reason"),
+            F.col("EventEnqueuedUtcTime"),
+            F.col("parsed_data.*")
+        )
+        .withColumn(
+            "event_time",
+            F.col("event_time").cast(TimestampType())
+        )
+    )
+
+    # -----------------------------------------------------
+    # 3.2 Define mandatory-field validation
+    # -----------------------------------------------------
+
+    validation_condition = (
+        F.col("event_id").isNotNull() &
+        F.col("vehicle_id").isNotNull() &
+        F.col("event_time").isNotNull() &
+        F.col("latitude").isNotNull() &
+        F.col("longitude").isNotNull() &
+        F.col("speed_kmh").isNotNull()
+    )
+
+    # -----------------------------------------------------
+    # 3.3 Remove repeated record IDs within the micro-batch
+    # -----------------------------------------------------
+
+    df_deduplicated_mb = (
+        df_parsed.dropDuplicates(["db_id"])
+    )
+
+    # -----------------------------------------------------
+    # 3.4 Identify and persist rejected records
+    # -----------------------------------------------------
+
+    df_rejected = (
+        df_deduplicated_mb
+        .filter(
+            (F.col("is_valid") == False) |
+            (~validation_condition)
+        )
+        .withColumn(
+            "rejection_reason",
+            F.coalesce(
+                F.col("reject_reason"),
+                F.lit(
+                    "missing mandatory fields "
+                    "(null keys/coords/speed)"
+                )
+            )
+        )
+        .withColumn(
+            "rejected_at",
+            F.current_timestamp()
+        )
+    )
+
+    if not df_rejected.isEmpty():
+        (
+            df_rejected.write
+            .format("delta")
+            .mode("append")
+            .option("mergeSchema", "true")
+            .saveAsTable("silver_rejected")
+        )
+
+    # -----------------------------------------------------
+    # 3.5 Select valid records
+    # -----------------------------------------------------
+
+    df_valid = df_deduplicated_mb.filter(
+        (F.col("is_valid") == True) &
+        validation_condition
+    )
+
+    # -----------------------------------------------------
+    # 3.6 Apply business-key deduplication and derive date
+    # -----------------------------------------------------
+
+    df_valid_clean = (
+        df_valid
+        .dropDuplicates(["vehicle_id", "event_time"])
+        .withColumn(
+            "event_date",
+            F.to_date(F.col("event_time"))
+        )
+    )
+
+    # -----------------------------------------------------
+    # 3.7 Exclude IDs already present in Silver
+    # -----------------------------------------------------
+
+    if spark.catalog.tableExists("silver_telemetry"):
+
+        silver_existing = (
+            spark.read.table("silver_telemetry")
+            .select("db_id")
+        )
+
+        new_valid_records = df_valid_clean.join(
+            silver_existing,
+            on="db_id",
+            how="left_anti"
+        )
+
+    else:
+        new_valid_records = df_valid_clean
+
+    # -----------------------------------------------------
+    # 3.8 Append new records to the Silver Delta table
+    # -----------------------------------------------------
+
+    if not new_valid_records.isEmpty():
+        (
+            new_valid_records.write
+            .format("delta")
+            .mode("append")
+            .option("mergeSchema", "true")
+            .partitionBy("event_date")
+            .saveAsTable("silver_telemetry")
+        )
+
+# ---------------------------------------------------------
+# 4. Configure and start the streaming query
+# ---------------------------------------------------------
+
+query = (
+    df_bronze_stream.writeStream
+    .format("delta")
+    .foreachBatch(process_silver_streaming_microbatch)
+    .option(
+        "checkpointLocation",
+        "Files/checkpoints/silver_streaming_full_rules"
+    )
+    .trigger(availableNow=True)
+    .start()
+)
+
+# Wait for all available input to finish processing
+query.awaitTermination()
+
+print("write new stream only")
+```
+
+### 11.3 Step 1 — Schema definition
+
+The `telemetry_schema` object defines the expected structure of each raw JSON payload.
+
+The schema includes identifiers, timestamps, GPS coordinates, speed, engine measurements, fuel consumption, odometer readings, and cargo temperature.
+
+The fields are nullable in the schema, while mandatory-field validation is handled separately.
+
+### 11.4 Step 2 — Streaming source
 
 ```python
 df_bronze_stream = (
     spark.readStream
     .format("delta")
     .option("ignoreChanges", "true")
-    .table("bronze_telemetry")
+    .table("bronze_telemetry_v2")
 )
 ```
 
-The streaming DataFrame reads from the Bronze Delta table.
+This creates a streaming DataFrame from the Bronze Delta table.
 
-The `ignoreChanges` option affects how changes to the source are handled. It should not be interpreted as a universal guarantee that all source updates will be captured as new events.
+The streaming source supplies records to the micro-batch processing function. The actual amount of data processed depends on the source state and the streaming checkpoint.
 
-The streaming DataFrame is filtered using the upstream validation flag:
+### 11.5 Step 3 — The `foreachBatch` processing function
 
 ```python
-df_silver_stream = df_bronze_stream.filter(
-    F.col("is_valid") == True
+def process_silver_streaming_microbatch(microBatchDF, batchId):
+```
+
+`foreachBatch` invokes this function for each micro-batch processed by the streaming query.
+
+The function receives:
+
+- `microBatchDF`: the DataFrame containing the current batch.
+- `batchId`: the identifier associated with the micro-batch.
+
+The function performs parsing, validation, rejected-record handling, deduplication, existing-ID filtering, and Delta writes.
+
+The `batchId` parameter is available for logging or batch-specific control, although the supplied implementation does not use it directly.
+
+### 11.6 Step 4 — Empty micro-batch handling
+
+```python
+if microBatchDF.isEmpty():
+    return
+```
+
+An empty micro-batch has no records to process.
+
+The function returns immediately instead of executing the remaining transformations and writes.
+
+### 11.7 Step 5 — JSON parsing and timestamp conversion
+
+```python
+df_parsed = microBatchDF.withColumn(
+    "parsed_data",
+    F.from_json(F.col("raw"), telemetry_schema)
+).select(
+    F.col("db_id"),
+    F.col("source"),
+    F.col("is_valid"),
+    F.col("reject_reason"),
+    F.col("EventEnqueuedUtcTime"),
+    F.col("parsed_data.*")
+).withColumn(
+    "event_time",
+    F.col("event_time").cast(TimestampType())
 )
 ```
 
-This assumes that `is_valid` exists in the streaming source schema.
+The transformation parses the raw payload and expands the resulting structured fields.
 
-### 11.3 Micro-batch deduplication
+The original source metadata is retained alongside the parsed telemetry fields.
 
-The `foreachBatch` function removes duplicate `db_id` values within each micro-batch.
+The `event_time` cast prepares the event timestamp for time-based processing. If parsing or conversion produces null values, the mandatory-field validation can reject the affected records.
+
+### 11.8 Step 6 — Mandatory-field validation
+
+The validation condition requires non-null values for:
+
+- `event_id`
+- `vehicle_id`
+- `event_time`
+- `latitude`
+- `longitude`
+- `speed_kmh`
+
+The condition is used by both the valid and rejected record paths.
+
+The code checks nullability rather than all possible data quality constraints. For example, coordinate range validation and physical plausibility checks are separate concerns.
+
+### 11.9 Step 7 — Micro-batch deduplication
 
 ```python
-clean_micro_batch = (
-    microBatchDF.dropDuplicates(["db_id"])
+df_deduplicated_mb = df_parsed.dropDuplicates(["db_id"])
+```
+
+This removes repeated `db_id` values within the current micro-batch.
+
+The result is used to derive both rejected and valid records.
+
+This operation does not, by itself, prevent a duplicate ID from appearing in a later micro-batch. The existing Silver ID check provides the subsequent filtering step for valid records.
+
+### 11.10 Step 8 — Rejected records
+
+```python
+df_rejected = df_deduplicated_mb.filter(
+    (F.col("is_valid") == False) |
+    (~validation_condition)
 )
 ```
 
-This removes repeated IDs within the current micro-batch.
+A record is rejected when the upstream flag is explicitly false or when one or more mandatory fields are null.
 
-However, deduplication within a single micro-batch does not by itself prevent a record from being reprocessed in a later micro-batch.
+The code assigns a rejection reason using the original `reject_reason` when available. If that field is null, a fallback message is provided.
 
-### 11.4 Existing Silver IDs
+The `rejected_at` column records the current processing timestamp.
 
-The notebook reads existing Silver IDs and uses a left-anti join to select records that are not already present.
+Non-empty rejected records are appended to `silver_rejected` in Delta format.
+
+### 11.11 Step 9 — Valid records
 
 ```python
-silver_existing = (
-    spark.read.table("silver_telemetry")
-    .select("db_id")
-)
-
-new_records_only = clean_micro_batch.join(
-    silver_existing,
-    on="db_id",
-    how="left_anti"
+df_valid = df_deduplicated_mb.filter(
+    (F.col("is_valid") == True) &
+    validation_condition
 )
 ```
 
-A left-anti join returns rows from the left DataFrame for which no matching key exists in the right DataFrame.
+The valid-record path requires both a true upstream validity flag and successful mandatory-field validation.
 
-In this case, it selects the current micro-batch records whose `db_id` values are absent from the existing Silver ID set.
+Records with an upstream validity flag of null are not selected by this condition.
 
-This is the main mechanism used by the notebook to prevent already-inserted IDs from being written again.
-
-### 11.5 Appending new records
-
-When new records exist, the notebook appends them to the Silver Delta table.
+### 11.12 Step 10 — Business-key deduplication
 
 ```python
-if not new_records_only.isEmpty():
+df_valid_clean = (
+    df_valid
+    .dropDuplicates(["vehicle_id", "event_time"])
+    .withColumn(
+        "event_date",
+        F.to_date(F.col("event_time"))
+    )
+)
+```
+
+This performs a second deduplication operation using `vehicle_id` and `event_time`.
+
+It removes repeated combinations of these columns within the valid DataFrame for the current micro-batch.
+
+The same transformation derives `event_date`, which is required by the partitioned write.
+
+The business-key deduplication is separate from the `db_id` deduplication. They identify duplicates according to different definitions.
+
+### 11.13 Step 11 — Existing-ID filtering
+
+```python
+if spark.catalog.tableExists("silver_telemetry"):
+    silver_existing = (
+        spark.read.table("silver_telemetry")
+        .select("db_id")
+    )
+
+    new_valid_records = df_valid_clean.join(
+        silver_existing,
+        on="db_id",
+        how="left_anti"
+    )
+else:
+    new_valid_records = df_valid_clean
+```
+
+The code checks whether the Silver table exists.
+
+If it exists, the notebook reads its `db_id` values and uses a left-anti join to select valid records with IDs not already stored in Silver.
+
+If the table does not exist, all records remaining in `df_valid_clean` are selected as candidates for insertion.
+
+This filtering is based on `db_id`. It does not check whether an existing Silver record already has the same `vehicle_id` and `event_time` combination under a different `db_id`.
+
+### 11.14 Step 12 — Append-only Silver writes
+
+```python
+if not new_valid_records.isEmpty():
     (
-        new_records_only.write
+        new_valid_records.write
         .format("delta")
         .mode("append")
         .option("mergeSchema", "true")
+        .partitionBy("event_date")
         .saveAsTable("silver_telemetry")
     )
 ```
 
-The write uses append mode rather than overwrite mode.
+The code writes only when the candidate DataFrame is non-empty.
 
-The `mergeSchema` option allows schema evolution under the applicable Delta write behavior. Schema evolution should still be managed carefully because unexpected columns or type changes can affect downstream processing.
+The write:
 
-### 11.6 Checkpoint and execution
+- Uses Delta format.
+- Appends records instead of replacing the target table.
+- Allows supported schema evolution.
+- Partitions the output by `event_date`.
+- Saves the output to `silver_telemetry`.
+
+### 11.15 Step 13 — Checkpointing
 
 ```python
-query = (
-    df_silver_stream.writeStream
-    .format("delta")
-    .foreachBatch(insert_only_new)
-    .option(
-        "checkpointLocation",
-        "Files/checkpoints/silver_insert_new_only"
-    )
-    .trigger(availableNow=True)
-    .start()
+.option(
+    "checkpointLocation",
+    "Files/checkpoints/silver_streaming_full_rules"
 )
+```
 
+The checkpoint location stores streaming progress and supports recovery after interruption.
+
+The checkpoint must remain consistent with the streaming query it belongs to. Reusing a checkpoint with a materially different source or processing plan can create compatibility issues.
+
+### 11.16 Step 14 — Available-now trigger
+
+```python
+.trigger(availableNow=True)
+```
+
+The available-now trigger processes the available input and terminates after the available data has been processed.
+
+It is useful for incremental scheduled processing because the query can process new data and then finish instead of running continuously.
+
+The query waits for termination using:
+
+```python
 query.awaitTermination()
 ```
 
-The checkpoint records streaming progress and supports recovery after interruption.
+The final print statement:
 
-The available-now trigger processes available input and terminates after processing the available data. It is not a continuously running streaming job.
+```python
+print("write new stream only")
+```
 
-### 11.7 Execution evidence
+prints a message after the streaming query finishes. The message itself is not an independent verification of record counts or exactly-once processing.
 
-The captured output reports:
+### 11.17 Streaming implementation considerations
 
-`Only new records were inserted into Silver successfully!`
+The supplied code implements several layers of duplicate prevention, but the exact guarantees depend on the source, checkpoint, and write behavior.
 
-This confirms that the displayed notebook execution completed and printed the expected message. It does not by itself prove exactly-once processing under every possible failure scenario.
+Important considerations include:
 
-### Engineering considerations
+1. `dropDuplicates(["db_id"])` operates within the current micro-batch.
+2. `dropDuplicates(["vehicle_id", "event_time"])` also operates on the current valid micro-batch.
+3. The left-anti join checks `db_id` against the existing Silver table.
+4. The rejected-record write uses append mode and has no equivalent existing-ID check.
+5. Concurrent writers can affect the behavior of read-before-write duplicate checks.
+6. Source updates and deletions need to be handled according to the source's change semantics.
+7. The batch ID is available but is not used for explicit batch-level idempotency.
+8. The full-refresh overwrite path and incremental append path should be coordinated.
 
-The incremental design depends on:
-
-- A stable identifier for each record.
-- Consistent deduplication logic.
-- A valid checkpoint location.
-- Correct handling of source changes.
-- Coordination with other writers to the Silver table.
-- Consistent schemas between batch and streaming processing.
-
-The full-refresh overwrite path and incremental append path should be coordinated carefully to avoid inconsistent results if both operate on the same target table.
-
-### Evidence — Incremental Streaming
-
-![Incremental Streaming Ingestion](https://raw.githubusercontent.com/abdullah-fat7y/fleet-telematics-lakehouse/feat/silver_processing/evidence/person2/10_Incremental%20Streaming%20Ingestion%20with%20Duplicate%20Prevention%20in%20the%20Silver%20Layer.png)
-
-*Figure 8 — Streaming ingestion, micro-batch deduplication, anti-join filtering, checkpointing, and append-based writes.*
+The implementation should not be described as providing an unconditional exactly-once guarantee without further testing under retry, replay, and concurrent-write scenarios.
 
 ---
 
@@ -1038,17 +1473,15 @@ The full-refresh overwrite path and incremental append path should be coordinate
 
 SQL queries are used to inspect the persisted datasets and verify the outputs of the Silver processing pipeline.
 
-The following screenshots document the captured query results.
-
 ### 12.1 Silver telemetry
 
 The `silver_telemetry` table contains the cleaned telemetry records and relevant metadata.
 
-SQL inspection can be used to review the output schema and confirm that the table contains the expected processed fields.
+SQL inspection can be used to review the output schema and confirm that the expected processed fields are available.
 
 ![Silver Telemetry SQL Results](https://raw.githubusercontent.com/abdullah-fat7y/fleet-telematics-lakehouse/feat/silver_processing/evidence/person2/11_silver_telemetry_query_results.png)
 
-*Figure 9 — SQL inspection of persisted Silver telemetry records.*
+*Figure 8 — SQL inspection of persisted Silver telemetry records.*
 
 ### 12.2 Rejected records
 
@@ -1058,7 +1491,7 @@ Inspecting these records helps identify data quality issues and understand why p
 
 ![Silver Rejected SQL Results](https://raw.githubusercontent.com/abdullah-fat7y/fleet-telematics-lakehouse/feat/silver_processing/evidence/person2/12_silver_rejected_query_results.png)
 
-*Figure 10 — Rejected telemetry records and their recorded validation reasons.*
+*Figure 9 — Rejected telemetry records and their recorded validation reasons.*
 
 ### 12.3 Detected anomalies
 
@@ -1068,17 +1501,17 @@ SQL queries can be used to inspect the available anomaly attributes and review w
 
 ![Silver Telemetry Anomalies SQL Results](https://raw.githubusercontent.com/abdullah-fat7y/fleet-telematics-lakehouse/feat/silver_processing/evidence/person2/13_silver_telemetry_anomalies_query_results.png)
 
-*Figure 11 — SQL inspection of detected telemetry anomalies.*
+*Figure 10 — SQL inspection of detected telemetry anomalies.*
 
 ### 12.4 Aggregated episodes
 
-The `silver_anomaly_episodes` table contains the grouped episode records and summary attributes.
+The `silver_anomaly_episodes` table contains grouped episode records and summary attributes.
 
-This output is especially important for the evaluation stage because the ground truth is also evaluated at the episode level.
+This output is especially important for evaluation because the ground truth is also evaluated at the episode level.
 
 ![Silver Anomaly Episodes SQL Results](https://raw.githubusercontent.com/abdullah-fat7y/fleet-telematics-lakehouse/feat/silver_processing/evidence/person2/14_silver_telemetry_anomalies_episodes_query_result.png)
 
-*Figure 12 — SQL inspection of the aggregated anomaly episodes.*
+*Figure 11 — SQL inspection of the aggregated anomaly episodes.*
 
 ---
 
@@ -1092,13 +1525,11 @@ The truth dataset includes an event identifier, an anomaly type, and an anomaly 
 
 The ground truth is used only during evaluation. It must not influence the production anomaly detection logic.
 
-### 13.2 The critical distinction: readings versus episodes
-
-The evaluation results must be interpreted using the correct level of granularity.
+### 13.2 Readings versus episodes
 
 The ground-truth dataset contains approximately **90 reading-level records** associated with the anomalies.
 
-However, those 90 records do not represent 90 independent anomaly episodes. Multiple readings can belong to the same injected anomaly group.
+These records do not represent 90 independent anomaly episodes. Multiple readings can belong to the same injected anomaly group.
 
 When the truth records are grouped to match the episode-level evaluation, they produce **6 ground-truth episode groups** in the captured evaluation scope.
 
@@ -1107,10 +1538,10 @@ When the truth records are grouped to match the episode-level evaluation, they p
 | Truth reading | One ground-truth record associated with an anomaly. |
 | Truth episode group | One injected anomaly episode represented by a group identifier. |
 | Detected anomaly reading | One telemetry reading flagged by the detection rules. |
-| Detected episode | A group of related anomalous readings produced by the episode aggregation logic. |
+| Detected episode | A group of related anomalous readings produced by episode aggregation. |
 | True positive | A detected episode counted as matching a truth episode under the implemented matching conditions. |
 
-**Therefore, 90 truth readings and 6 truth episodes are not contradictory. They represent different levels of aggregation.**
+Therefore, 90 truth readings and 6 truth episodes are not contradictory. They represent different levels of aggregation.
 
 The evaluation uses the episode-level count of 6 as its ground-truth denominator, rather than treating all 90 readings as independent anomaly events.
 
@@ -1124,15 +1555,13 @@ The implemented logic includes:
 2. Restricting detected episodes to vehicles represented in the truth data.
 3. Applying a minimum reading-count condition to the primary matching scope.
 4. Matching candidates using vehicle identity and anomaly type.
-5. Counting matched candidates and calculating the evaluation metrics.
+5. Counting matched candidates and calculating evaluation metrics.
 
-### 13.4 Important matching limitation
+### 13.4 Matching limitations
 
 Matching by vehicle and anomaly type does not necessarily prove that the detected episode corresponds to the exact time interval of the injected event.
 
 If a vehicle has multiple episodes of the same anomaly type, a stronger matching strategy should use the ground-truth episode identity and temporal overlap or event-level correspondence.
-
-The evaluation output should therefore be interpreted according to the actual matching conditions rather than assuming that a shared vehicle and anomaly type always establish an exact incident match.
 
 ### 13.5 Evaluation formulas
 
@@ -1169,7 +1598,7 @@ F1-score combines precision and recall into a single metric.
 
 ![Anomaly Detection Evaluation Code](https://raw.githubusercontent.com/abdullah-fat7y/fleet-telematics-lakehouse/feat/silver_processing/evidence/person2/09_Anomaly%20Detection%20Evaluation%20Using%20Precision%2C%20Recall%2C%20and%20F1-Score.png)
 
-*Figure 13 — Ground-truth preparation, episode matching, and calculation of precision, recall, and F1-score.*
+*Figure 12 — Ground-truth preparation, episode matching, and calculation of Precision, Recall, and F1-score.*
 
 ---
 
@@ -1181,7 +1610,7 @@ The captured SQL query returns the following persisted evaluation metrics.
 
 ![Evaluation Results](https://raw.githubusercontent.com/abdullah-fat7y/fleet-telematics-lakehouse/feat/silver_processing/evidence/person2/15_evaluation_results.png)
 
-*Figure 14 — Evaluation metrics retrieved from the `evaluation_metrics` table.*
+*Figure 13 — Evaluation metrics retrieved from the `evaluation_metrics` table.*
 
 | Metric | Reported value |
 |---|---:|
@@ -1231,23 +1660,13 @@ F1 =
 \approx 0.2222
 \]
 
-The displayed F1-score is consistent with the reported precision and recall, subject to rounding.
+The displayed F1-score is consistent with the reported Precision and Recall, subject to rounding.
 
-### 14.6 Why the metrics are relatively low
+### 14.6 Interpretation
 
 The ground-truth table contains approximately 90 readings, but the evaluation groups them into 6 anomaly episodes.
 
-This grouping is necessary because several truth readings may belong to the same continuous injected event.
-
-The low reported scores must therefore be interpreted against the **6 episode-level ground-truth groups**, not against 90 independent truth events.
-
-The number of truth readings alone does not explain the score. The score depends on:
-
-- The number of true-positive episode matches.
-- The number of detected episodes.
-- The episode grouping rules.
-- The evaluation matching method.
-- The scope of records included in the comparison.
+The reported scores must therefore be interpreted against the six episode-level ground-truth groups, not against 90 independent truth events.
 
 In this execution:
 
@@ -1261,11 +1680,11 @@ These values describe the output of the current evaluation logic. They do not in
 
 ### 14.7 Recommended evaluation improvements
 
-Before adjusting the anomaly thresholds, investigate:
+Before adjusting anomaly thresholds, investigate:
 
 1. Whether the six ground-truth groups are constructed correctly.
 2. Whether the same vehicles are included on both sides.
-3. Whether the anomaly types are normalized consistently.
+3. Whether anomaly types are normalized consistently.
 4. Whether detected episodes overlap the correct truth time intervals.
 5. Whether the minimum two-reading condition excludes valid events.
 6. Whether episode boundaries split or merge events unexpectedly.
@@ -1274,19 +1693,11 @@ Before adjusting the anomaly thresholds, investigate:
 
 A more robust evaluation should produce an explicit match table containing matched episodes, unmatched detections, and unmatched ground-truth episodes.
 
-### 14.8 Important distinction
-
-The 90 truth records represent reading-level observations, while the six groups represent episode-level evaluation units.
-
-Consequently, the reported recall of 0.3333 means that two of the six ground-truth episodes were matched by the current method. It does not mean that only two of the 90 truth readings were detected.
-
 ---
 
 ## 15. Evidence Screenshots
 
 All screenshots are stored in `evidence/person2/`.
-
-The following evidence documents the major stages of the Silver processing and anomaly detection workflow.
 
 ### 15.1 Bronze sample data
 
@@ -1320,29 +1731,27 @@ The following evidence documents the major stages of the Silver processing and a
 
 ![Evaluation Code](https://raw.githubusercontent.com/abdullah-fat7y/fleet-telematics-lakehouse/feat/silver_processing/evidence/person2/09_Anomaly%20Detection%20Evaluation%20Using%20Precision%2C%20Recall%2C%20and%20F1-Score.png)
 
-### 15.9 Incremental streaming
-
-![Incremental Streaming](https://raw.githubusercontent.com/abdullah-fat7y/fleet-telematics-lakehouse/feat/silver_processing/evidence/person2/10_Incremental%20Streaming%20Ingestion%20with%20Duplicate%20Prevention%20in%20the%20Silver%20Layer.png)
-
-### 15.10 Silver telemetry query
+### 15.9 Silver telemetry query
 
 ![Silver Telemetry](https://raw.githubusercontent.com/abdullah-fat7y/fleet-telematics-lakehouse/feat/silver_processing/evidence/person2/11_silver_telemetry_query_results.png)
 
-### 15.11 Rejected records query
+### 15.10 Rejected records query
 
 ![Rejected Records](https://raw.githubusercontent.com/abdullah-fat7y/fleet-telematics-lakehouse/feat/silver_processing/evidence/person2/12_silver_rejected_query_results.png)
 
-### 15.12 Anomaly query
+### 15.11 Anomaly query
 
 ![Anomaly Query](https://raw.githubusercontent.com/abdullah-fat7y/fleet-telematics-lakehouse/feat/silver_processing/evidence/person2/13_silver_telemetry_anomalies_query_results.png)
 
-### 15.13 Episode query
+### 15.12 Episode query
 
 ![Episode Query](https://raw.githubusercontent.com/abdullah-fat7y/fleet-telematics-lakehouse/feat/silver_processing/evidence/person2/14_silver_telemetry_anomalies_episodes_query_result.png)
 
-### 15.14 Evaluation results
+### 15.13 Evaluation results
 
 ![Evaluation Results](https://raw.githubusercontent.com/abdullah-fat7y/fleet-telematics-lakehouse/feat/silver_processing/evidence/person2/15_evaluation_results.png)
+
+*The previous standalone streaming-code screenshot is intentionally omitted because the implementation is documented directly in Section 11.*
 
 ---
 
@@ -1352,9 +1761,7 @@ The following evidence documents the major stages of the Silver processing and a
 
 Mandatory telemetry fields must be validated before calculations.
 
-Nullable fields must be interpreted according to their business meaning, particularly cargo temperature for dry vans.
-
-A null field does not always mean the record is invalid. Its interpretation depends on whether the field is mandatory for the relevant vehicle and measurement type.
+Nullable fields must be interpreted according to their business meaning, particularly cargo temperature for vehicles that do not require temperature monitoring.
 
 ### 16.2 Malformed JSON
 
@@ -1362,11 +1769,9 @@ Malformed JSON should be distinguished from valid JSON containing null values.
 
 The original payload should be preserved, and parsing failures should receive explicit rejection reasons.
 
-This distinction helps identify whether a record failed because the payload could not be parsed or because the parsed record lacked required values.
-
 ### 16.3 Deduplication identity
 
-The current implementation uses `db_id`, while the upstream documentation identifies `vehicle_id + event_time` as the business key.
+The implementation uses `db_id` for micro-batch deduplication and existing-ID filtering, and `vehicle_id + event_time` for an additional deduplication step within valid micro-batches.
 
 The intended duplicate semantics should be documented and applied consistently across streaming, batch, and replay paths.
 
@@ -1374,33 +1779,23 @@ The intended duplicate semantics should be documented and applied consistently a
 
 Movement analytics and episode grouping depend on correctly ordered timestamps.
 
-Time zones, duplicate timestamps, and out-of-order events should be handled explicitly.
-
-Incorrect ordering can affect:
-
-- Previous-reading calculations.
-- Time-gap calculations.
-- Calculated speeds.
-- Episode boundaries.
-- Anomaly matching.
+Time zones, duplicate timestamps, and out-of-order events should be handled explicitly because they can affect previous-reading calculations, time gaps, calculated speeds, and episode boundaries.
 
 ### 16.5 GPS calculations
 
 Invalid coordinates, zero or negative time gaps, and implausible distances should be addressed before calculated speeds are used for anomaly detection.
 
-GPS-derived distance is an approximation and can be affected by inaccurate coordinates or irregular reporting intervals.
-
 ### 16.6 Anomaly thresholds
 
 Threshold-based detection is interpretable but can produce false positives and false negatives.
 
-The rules should be validated against the known injected anomaly behavior.
+The rules should be validated against known injected anomaly behavior.
 
 ### 16.7 Episode aggregation
 
 The five-minute episode gap threshold directly affects the number of detected episodes.
 
-Changes to this threshold can alter the evaluation metrics even when the underlying reading-level flags do not change.
+Changes to this threshold can alter evaluation metrics even when the underlying reading-level anomaly flags do not change.
 
 ### 16.8 Incremental processing
 
@@ -1408,7 +1803,13 @@ Checkpoint recovery, stable identifiers, consistent schemas, and coordinated wri
 
 The streaming and full-refresh paths should not conflict with each other.
 
-### 16.9 Evaluation integrity
+### 16.9 Rejected-record idempotency
+
+The streaming code appends rejected records to `silver_rejected`, but does not check existing rejected IDs before writing.
+
+If the same source records are replayed, rejected records could be appended again. A production implementation should define and enforce the intended idempotency policy for rejected data as well.
+
+### 16.10 Evaluation integrity
 
 Ground truth must remain separate from production detection.
 
@@ -1421,15 +1822,17 @@ Evaluation should retain enough detail to explain which episodes matched and why
 The following improvements are recommended:
 
 1. **Episode matching:** Match using vehicle, anomaly type, and temporal overlap.
-2. **Ground-truth verification:** Confirm the six groups correctly represent the intended injected episodes.
-3. **Validation count reconciliation:** Recalculate the captured counts using the same DataFrame and filters.
-4. **Deduplication policy:** Reconcile `db_id`, `event_id`, and the documented business key.
+2. **Ground-truth verification:** Confirm that the six groups correctly represent the intended injected episodes.
+3. **Validation count reconciliation:** Recalculate captured counts using consistent DataFrames and filters.
+4. **Deduplication policy:** Document the distinct roles of `db_id` and `vehicle_id + event_time`.
 5. **Incremental safety:** Coordinate overwrite and append processing paths.
-6. **Data quality:** Add range checks for coordinates, speed, fuel, engine temperature, and time gaps.
-7. **Anomaly explainability:** Preserve individual Boolean anomaly flags alongside the assigned anomaly type.
-8. **Evaluation diagnostics:** Generate a detailed list of matched and unmatched episodes.
-9. **Performance monitoring:** Record processing duration, input counts, rejected counts, and output counts for each execution.
-10. **Reproducibility:** Store the evaluation scope and matching configuration alongside the resulting metrics.
+6. **Rejected-record idempotency:** Prevent repeated rejected records from accumulating during replay.
+7. **Data quality:** Add range checks for coordinates, speed, fuel, engine temperature, and time gaps.
+8. **Anomaly explainability:** Preserve individual Boolean anomaly flags alongside the assigned anomaly type.
+9. **Evaluation diagnostics:** Generate a detailed list of matched and unmatched episodes.
+10. **Performance monitoring:** Record processing duration, input counts, rejected counts, and output counts for each execution.
+11. **Reproducibility:** Store evaluation scope and matching configuration alongside the resulting metrics.
+12. **Streaming recovery tests:** Verify behavior after retries, checkpoint recovery, and repeated source input.
 
 These are recommendations for further improvement, not claims that all of these features are already implemented.
 
@@ -1439,7 +1842,9 @@ These are recommendations for further improvement, not claims that all of these 
 
 Person 2 implements the Silver processing and anomaly analytics stage of the Fleet Telematics Lakehouse.
 
-The implementation demonstrates structured JSON parsing, validation, rejected-record preservation, deduplication, date-based Delta storage, broadcast joins, GPS movement analytics, rule-based anomaly detection, episode aggregation, incremental streaming ingestion, and SQL-based output verification.
+The implementation demonstrates structured JSON parsing, mandatory-field validation, rejected-record preservation, two levels of micro-batch deduplication, existing-ID filtering, date-based Delta storage, broadcast joins, GPS movement analytics, rule-based anomaly detection, episode aggregation, incremental streaming ingestion, and SQL-based output verification.
+
+The incremental streaming path processes available records from `bronze_telemetry_v2` through `foreachBatch`. It parses telemetry, separates valid and rejected records, filters existing Silver IDs, and appends new valid records to `silver_telemetry`.
 
 The captured evaluation reports:
 
@@ -1450,9 +1855,9 @@ The captured evaluation reports:
 - **Recall:** 0.3333.
 - **F1-score:** 0.2222.
 
-The ground-truth distinction is essential: approximately 90 reading-level truth records are grouped into six episode-level evaluation units. The evaluation metrics are calculated using the six episode groups, not the 90 individual readings.
+Approximately 90 reading-level truth records are grouped into six episode-level evaluation units. The reported metrics use the six episode groups rather than treating all 90 readings as independent events.
 
-The current metrics provide a baseline for the implemented matching procedure. The next priority is to verify episode grouping and matching, investigate unmatched detections, and reconcile validation counts before making conclusions about the anomaly detection thresholds.
+The current metrics provide a baseline for the implemented matching procedure. The next priority is to verify episode grouping and matching, investigate unmatched detections, reconcile validation counts, and test incremental idempotency before making conclusions about the anomaly detection thresholds.
 
 This Silver stage provides the structured and enriched telemetry foundation required for downstream Gold-layer modeling, fleet KPIs, and operational analytics.
 
