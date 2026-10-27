@@ -6,3 +6,4 @@ generator/output/runs/
 generator/output/logs/
 generator/output/dlq/
 generator/output/ops_upload/
+generator/output/landing/

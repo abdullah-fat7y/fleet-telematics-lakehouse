@@ -1,0 +1,6 @@
+stream run full-20261024T011408Z: 5 vehicles, simulated h 2.5-2.55, 1 workers
+  "run_id": "full-20261024T011408Z",
+  "events_generated": 30,
+  "events_sent": 30,
+  "events_dlq": 0,
+  "retries": 0,

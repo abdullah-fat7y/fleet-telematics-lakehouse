@@ -93,6 +93,18 @@ to the Lakehouse folder `Files/ops`, then run `ingestion/notebooks/04_dlq_and_in
 It builds `dlq_telemetry` (send and validation failures, with reasons) and `bronze_ingestion_log`,
 and marks DLQ rows as recovered once their replayed copy is in bronze.
 
+## Batch path (Files/landing)
+
+```bash
+.venv/bin/pip install azure-storage-file-datalake azure-identity
+echo 'FABRIC_TENANT_ID=<workspace tenant id>' >> .env              # never commit .env
+.venv/bin/python run_fleet.py --mode batch --from-hours 2 --hours 2.5   # files in output/landing/<run_id>/
+.venv/bin/python upload_to_onelake.py landing                         # -> Files/landing (add --watch to keep going)
+.venv/bin/python upload_to_onelake.py ops                             # DLQ file + logs -> Files/ops
+```
+
+Then run `ingestion/notebooks/05_load_landing.py` and `04_dlq_and_ingestion_log.py` in Fabric.
+
 ## Where things go
 
 | Thing | Where |
