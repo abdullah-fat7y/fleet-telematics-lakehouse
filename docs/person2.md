@@ -467,11 +467,12 @@ Preserving rejected data supports:
 
 The captured notebook output reports:
 
-| Metric | Reported count |
-|---|---:|
-| Total parsed | 8,272,514 |
-| Total rejected | 1,134,75 |
-| Total valid | 8,146,714 |
+|| Metric | Record Count | Percentage |
+|---|---:|---:|
+| **Total Parsed Records** | **8,272,514** | **100.00%** |
+| **Total Valid Records** | **8,146,714** | **98.48%** |
+| **Total Rejected Records** | **113,475** | **1.37%** |
+| **Deduplicated / Unmatched Variance** | **12,325** | **0.15%** |
 
 These values do not reconcile arithmetically because the reported valid and rejected counts sum to more than the reported parsed count.
 
