@@ -205,7 +205,7 @@ The inspection step helps verify:
 
 ## 5.3 Bronze Sample Data
 
-![Bronze Sample Data](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/feat/silver_processing/evidence/person2/01_bronze_sample_data.png?raw=true)
+![Bronze Sample Data](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/main/evidence/person2/01_bronze_sample_data.png?raw=true)
 
 The screenshot documents the source records before the complete Silver transformation.
 
@@ -240,7 +240,7 @@ Separating these cases makes the processing output easier to inspect and trouble
 
 ## 6.2 Bronze-to-Silver Processing Evidence
 
-![Bronze-to-Silver Incremental Data Processing and Schema Parsing](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/feat/silver_processing/evidence/person2/02_Bronze-to-Silver%20Incremental%20data%20Processing%20and%20Schema%20Parsing.png?raw=true)
+![Bronze-to-Silver Incremental Data Processing and Schema Parsing](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/main/evidence/person2/02_Bronze-to-Silver%20Incremental%20data%20Processing%20and%20Schema%20Parsing.png?raw=true)
 
 ---
 
@@ -322,7 +322,7 @@ The converted timestamp is required for chronological ordering, movement calcula
 
 ## 7.4 Schema Parsing Evidence
 
-![Bronze-to-Silver Incremental Data Processing and Schema Parsing](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/feat/silver_processing/evidence/person2/02_Bronze-to-Silver%20Incremental%20data%20Processing%20and%20Schema%20Parsing.png?raw=true)
+![Bronze-to-Silver Incremental Data Processing and Schema Parsing](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/main/evidence/person2/02_Bronze-to-Silver%20Incremental%20data%20Processing%20and%20Schema%20Parsing.png?raw=true)
 
 ---
 
@@ -371,7 +371,7 @@ Validation helps isolate these records instead of allowing them to flow silently
 
 ## 8.3 Validation Evidence
 
-![Data Validation, Deduplication, and Rejected Records Handling](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/feat/silver_processing/evidence/person2/03_Data%20Validation%2C%20Deduplication%2C%20and%20Rejected%20Records%20Handling.png?raw=true)
+![Data Validation, Deduplication, and Rejected Records Handling](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/main/evidence/person2/03_Data%20Validation%2C%20Deduplication%2C%20and%20Rejected%20Records%20Handling.png?raw=true)
 
 ---
 
@@ -438,7 +438,7 @@ The `mergeSchema` option allows compatible schema additions during writes, but i
 
 ## 9.5 Rejected Records Evidence
 
-![Data Validation, Deduplication, and Rejected Records Handling](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/feat/silver_processing/evidence/person2/03_Data%20Validation%2C%20Deduplication%2C%20and%20Rejected%20Records%20Handling.png?raw=true)
+![Data Validation, Deduplication, and Rejected Records Handling](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/main/evidence/person2/03_Data%20Validation%2C%20Deduplication%2C%20and%20Rejected%20Records%20Handling.png?raw=true)
 
 ---
 
@@ -488,7 +488,7 @@ The correct key depends on the source system and the intended definition of a un
 
 ## 10.4 Deduplication Evidence
 
-![Silver Layer Deduplication and Date-Based Partitioning](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/feat/silver_processing/evidence/person2/04_Silver%20Layer%20Deduplication%20and%20Date-Based%20Partitioning.png?raw=true)
+![Silver Layer Deduplication and Date-Based Partitioning](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/main/evidence/person2/04_Silver%20Layer%20Deduplication%20and%20Date-Based%20Partitioning.png?raw=true)
 
 ---
 
@@ -599,7 +599,7 @@ The actual performance benefit depends on data volume, partition distribution, a
 
 ## 12.4 Partitioning Evidence
 
-![Silver Layer Deduplication and Date-Based Partitioning](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/feat/silver_processing/evidence/person2/04_Silver%20Layer%20Deduplication%20and%20Date-Based%20Partitioning.png?raw=true)
+![Silver Layer Deduplication and Date-Based Partitioning](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/main/evidence/person2/04_Silver%20Layer%20Deduplication%20and%20Date-Based%20Partitioning.png?raw=true)
 
 ---
 
@@ -639,7 +639,7 @@ Broadcasting an oversized dataset can increase memory pressure, so the suitabili
 
 ## 13.4 Enrichment Evidence
 
-![Silver Telemetry Enrichment Using Broadcast Join](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/feat/silver_processing/evidence/person2/05_Silver%20Telemetry%20Enrichment%20Using%20Broadcast%20Join.png?raw=true)
+![Silver Telemetry Enrichment Using Broadcast Join](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/main/evidence/person2/05_Silver%20Telemetry%20Enrichment%20Using%20Broadcast%20Join.png?raw=true)
 
 ---
 
@@ -714,7 +714,7 @@ They are useful for:
 
 ## 14.5 Movement Analytics Evidence
 
-![Vehicle Movement Analytics and Cold Chain Violation Detection Using PySpark](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/feat/silver_processing/evidence/person2/06_Vehicle%20Movement%20Analytics%20and%20Cold%20Chain%20Violation%20Detection%20Using%20PySpark.png?raw=true)
+![Vehicle Movement Analytics and Cold Chain Violation Detection Using PySpark](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/main/evidence/person2/06_Vehicle%20Movement%20Analytics%20and%20Cold%20Chain%20Violation%20Detection%20Using%20PySpark.png?raw=true)
 
 ---
 
@@ -845,7 +845,7 @@ These indicators can help identify:
 
 ## 16.4 Cold-Chain and Movement Evidence
 
-![Vehicle Movement Analytics and Cold Chain Violation Detection Using PySpark](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/feat/silver_processing/evidence/person2/06_Vehicle%20Movement%20Analytics%20and%20Cold%20Chain%20Violation%20Detection%20Using%20PySpark.png?raw=true)
+![Vehicle Movement Analytics and Cold Chain Violation Detection Using PySpark](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/main/evidence/person2/06_Vehicle%20Movement%20Analytics%20and%20Cold%20Chain%20Violation%20Detection%20Using%20PySpark.png?raw=true)
 
 ---
 
@@ -946,7 +946,7 @@ These are the configured project rules, not universal operating limits for all v
 
 ## 17.8 Anomaly Detection Evidence
 
-![Anomaly Detection and Episode Aggregation for Vehicle Telemetry](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/feat/silver_processing/evidence/person2/07_Anomaly%20Detection%20and%20Episode%20Aggregation%20for%20Vehicle%20Telemetry.png?raw=true)
+![Anomaly Detection and Episode Aggregation for Vehicle Telemetry](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/main/evidence/person2/07_Anomaly%20Detection%20and%20Episode%20Aggregation%20for%20Vehicle%20Telemetry.png?raw=true)
 
 ---
 
@@ -1111,15 +1111,14 @@ The actual implementation must ensure that the episode identifier is generated b
 The episode duration is based on the first and last timestamps:
 
 ```text
-duration_seconds =
-    end_time - start_time
+duration_seconds = end_time - start_time
 ```
 
 A single-reading episode may have a duration of zero when the start and end timestamps are equal.
 
 ## 19.8 Episode Aggregation Evidence
 
-![Anomaly Detection and Episode Aggregation for Vehicle Telemetry](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/feat/silver_processing/evidence/person2/07_Anomaly%20Detection%20and%20Episode%20Aggregation%20for%20Vehicle%20Telemetry.png?raw=true)
+![Anomaly Detection and Episode Aggregation for Vehicle Telemetry](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/main/evidence/person2/07_Anomaly%20Detection%20and%20Episode%20Aggregation%20for%20Vehicle%20Telemetry.png?raw=true)
 
 ---
 
@@ -1310,7 +1309,7 @@ For each micro-batch, the function:
 
 ## 20.7 Streaming Pipeline Evidence
 
-![Incremental Streaming Ingestion with Duplicate Prevention in the Silver Layer](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/feat/silver_processing/evidence/person2/10_Incremental%20Streaming%20Ingestion%20with%20Duplicate%20Prevention%20in%20the%20Silver%20Layer.png?raw=true)
+![Incremental Streaming Ingestion with Duplicate Prevention in the Silver Layer](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/main/evidence/person2/10_Incremental%20Streaming%20Ingestion%20with%20Duplicate%20Prevention%20in%20the%20Silver%20Layer.png?raw=true)
 
 ---
 
@@ -1341,7 +1340,7 @@ The query retrieves up to 100 records. It does not guarantee that the rows are r
 
 ## 21.3 Query Results
 
-![Silver Telemetry Query Results](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/feat/silver_processing/evidence/person2/11_silver_telemetry_query_results.png?raw=true)
+![Silver Telemetry Query Results](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/main/evidence/person2/11_silver_telemetry_query_results.png?raw=true)
 
 ---
 
@@ -1370,7 +1369,7 @@ The presence of a rejected record does not necessarily mean that every field in 
 
 ## 22.3 Query Results
 
-![Silver Rejected Records Query Results](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/feat/silver_processing/evidence/person2/12_silver_rejected_query_results.png?raw=true)
+![Silver Rejected Records Query Results](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/main/evidence/person2/12_silver_rejected_query_results.png?raw=true)
 
 ---
 
@@ -1400,7 +1399,7 @@ The anomaly table represents individual anomalous observations. It should not au
 
 ## 23.3 Query Results
 
-![Silver Telemetry Anomalies Query Results](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/feat/silver_processing/evidence/person2/13_silver_telemetry_anomalies_query_results.png?raw=true)
+![Silver Telemetry Anomalies Query Results](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/main/evidence/person2/13_silver_telemetry_anomalies_query_results.png?raw=true)
 
 ---
 
@@ -1446,7 +1445,7 @@ The episode grouping rule used by this implementation starts a new episode when 
 
 ## 24.4 Query Results
 
-![Silver Telemetry Anomaly Episodes Query Results](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/feat/silver_processing/evidence/person2/14_silver_telemetry_anomalies_episodes_query_result.png?raw=true)
+![Silver Telemetry Anomaly Episodes Query Results](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/main/evidence/person2/14_silver_telemetry_anomalies_episodes_query_result.png?raw=true)
 
 ---
 
@@ -1565,7 +1564,7 @@ The F1-score summarizes the balance between the reported precision and recall.
 
 ## 26.4 Evaluation Query Results
 
-![Anomaly Detection Evaluation Results](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/feat/silver_processing/evidence/person2/15_evaluation_results.png?raw=true)
+![Anomaly Detection Evaluation Results](https://github.com/abdullah-fat7y/fleet-telematics-lakehouse/blob/main/evidence/person2/15_evaluation_results.png?raw=true)
 
 ## 26.5 Evaluation Scope and Limitations
 
