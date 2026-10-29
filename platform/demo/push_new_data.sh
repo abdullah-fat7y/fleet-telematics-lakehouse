@@ -4,6 +4,7 @@
 #   ./push_new_data.sh --dry-run                 checks + plan only, nothing is sent (rehearse with this)
 #   ./push_new_data.sh                           day 5: batch 06:00-09:00 + stream from 09:00 for 10 min at 700/s
 #   ./push_new_data.sh --batch-hours 2 --stream-minutes 5 --rate 500
+#   ./push_new_data.sh --only batch              just the batch part (then later: --only stream)
 #
 # Batch : generator -> API (history) -> PostgreSQL -> extractor -> Files/landing_v2   (DAG task 11 loads it)
 # Stream: generator -> API (live) -> PostgreSQL -> Debezium -> Kafka -> bridge -> Eventstream v2 -> bronze
@@ -12,7 +13,7 @@
 # Refuses to send a time window that was already sent (no duplicates), unless --force.
 set -euo pipefail
 
-DAY=5 BATCH_HOURS=3 STREAM_MINUTES=10 RATE=700 DRY_RUN=0 FORCE=0
+DAY=5 BATCH_HOURS=3 STREAM_MINUTES=10 RATE=700 DRY_RUN=0 FORCE=0 ONLY=both
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --day) DAY=$2; shift 2 ;;
@@ -21,10 +22,14 @@ while [[ $# -gt 0 ]]; do
     --rate) RATE=$2; shift 2 ;;
     --dry-run) DRY_RUN=1; shift ;;
     --force) FORCE=1; shift ;;
-    -h|--help) sed -n '2,13p' "$0"; exit 0 ;;
+    --only) ONLY=$2; shift 2 ;;
+    -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
     *) echo "unknown option $1"; exit 2 ;;
   esac
 done
+
+[[ "$ONLY" =~ ^(both|batch|stream)$ ]] || { echo "--only must be batch or stream"; exit 2; }
+DO_B=$([[ "$ONLY" != stream ]] && echo 1 || echo 0); DO_S=$([[ "$ONLY" != batch ]] && echo 1 || echo 0)
 
 HERE="$(cd "$(dirname "$0")" && pwd)"
 REPO="$(cd "$HERE/../.." && pwd)"
@@ -55,8 +60,10 @@ EOF
 )
 
 bold "Plan"
-echo "  Batch : $B_START -> $B_END (simulated), channel=history, then hourly extract to Files/landing_v2"
-echo "  Stream: from $S_START (simulated), channel=live, ${STREAM_MINUTES} min at ${RATE} events/s ≈ $((STREAM_MINUTES * 60 * RATE)) events"
+[[ "$DO_B" == 1 ]] && echo "  Batch : $B_START -> $B_END (simulated), channel=history, then hourly extract to Files/landing_v2" \
+                  || echo "  Batch : skipped (--only stream)"
+[[ "$DO_S" == 1 ]] && echo "  Stream: from $S_START (simulated), channel=live, ${STREAM_MINUTES} min at ${RATE} events/s ≈ $((STREAM_MINUTES * 60 * RATE)) events" \
+                  || echo "  Stream: skipped (--only batch)"
 echo "  Logs  : $LOGS"
 
 bold "Checks"
@@ -74,8 +81,9 @@ grep -q '^FABRIC_TENANT_ID=' "$GEN/.env" && ok "Fabric tenant set (for uploads)"
 [[ "$DAY" -le "$CFG_DAYS" ]] && ok "reference data has trips for day $DAY" || bad "config has only $CFG_DAYS days of trips (set simulation.days and run generate.py reference)"
 FREE_GB=$(df -g "$REPO" | awk 'NR==2 {print $4}')
 [[ "$FREE_GB" -ge 5 ]] && ok "disk: ${FREE_GB} GB free" || bad "disk: only ${FREE_GB} GB free"
-ALREADY_B=$(psql_q "select count(*) from telemetry_history where event_time >= '$B_START' and event_time < '$B_END'")
-ALREADY_S=$(psql_q "select count(*) from telemetry_live where event_time >= '$S_START' and event_time < timestamptz '$S_START' + interval '1 day'")
+ALREADY_B=0 ALREADY_S=0
+[[ "$DO_B" == 1 ]] && ALREADY_B=$(psql_q "select count(*) from telemetry_history where event_time >= '$B_START' and event_time < '$B_END'")
+[[ "$DO_S" == 1 ]] && ALREADY_S=$(psql_q "select count(*) from telemetry_live where event_time >= '$S_START' and event_time < timestamptz '$S_START' + interval '1 day'")
 if [[ "$ALREADY_B" == "0" && "$ALREADY_S" == "0" ]]; then ok "this time window was never sent (no duplicates)"
 elif [[ "$FORCE" == "1" ]]; then echo "  ! window already has data ($ALREADY_B batch, $ALREADY_S stream rows) - sending anyway (--force)"
 else bad "window already sent ($ALREADY_B batch, $ALREADY_S stream rows) - pick another --day or use --force"; fi
@@ -83,9 +91,9 @@ else bad "window already sent ($ALREADY_B batch, $ALREADY_S stream rows) - pick 
 
 if [[ "$DRY_RUN" == "1" ]]; then
   bold "Dry run - nothing was sent. Without --dry-run this would run:"
-  echo "  $PY run_fleet.py --mode api --channel history --from-hours $B_FROM --hours $B_TO"
-  echo "  $PY run_fleet.py --mode api --channel live --from-hours $S_FROM --hours $S_TO --rate $RATE --minutes $STREAM_MINUTES"
-  echo "  $PY extract.py --incremental"
+  [[ "$DO_B" == 1 ]] && echo "  $PY run_fleet.py --mode api --channel history --from-hours $B_FROM --hours $B_TO"
+  [[ "$DO_S" == 1 ]] && echo "  $PY run_fleet.py --mode api --channel live --from-hours $S_FROM --hours $S_TO --rate $RATE --minutes $STREAM_MINUTES"
+  [[ "$DO_B" == 1 ]] && echo "  $PY extract.py --incremental"
   echo "  $PY upload_to_onelake.py reference && $PY upload_to_onelake.py truth"
   exit 0
 fi
@@ -93,12 +101,20 @@ fi
 BEFORE_H=$(psql_q "select count(*) from telemetry_history"); BEFORE_L=$(psql_q "select count(*) from telemetry_live")
 STARTED=$(date +%s)
 
-bold "1. Generators start (batch + stream); each first fast-forwards to day $DAY (~5 min)"
-(cd "$GEN" && "$PY" -u run_fleet.py --mode api --channel history --from-hours "$B_FROM" --hours "$B_TO" > "$LOGS/batch_generator.log" 2>&1; echo "EXIT $?" >> "$LOGS/batch_generator.log") &
-(cd "$GEN" && "$PY" -u run_fleet.py --mode api --channel live --from-hours "$S_FROM" --hours "$S_TO" --rate "$RATE" --minutes "$STREAM_MINUTES" > "$LOGS/stream_generator.log" 2>&1; echo "EXIT $?" >> "$LOGS/stream_generator.log") &
+bold "1. Generator(s) start ($ONLY); each first fast-forwards to day $DAY (~5 min)"
+EXTRACT_STARTED=0
+if [[ "$DO_B" == 1 ]]; then
+  (cd "$GEN" && "$PY" -u run_fleet.py --mode api --channel history --from-hours "$B_FROM" --hours "$B_TO" > "$LOGS/batch_generator.log" 2>&1; echo "EXIT $?" >> "$LOGS/batch_generator.log") &
+else  # skipped part counts as finished
+  echo "EXIT 0" > "$LOGS/batch_generator.log"; echo "EXIT 0" > "$LOGS/extract.log"; EXTRACT_STARTED=1
+fi
+if [[ "$DO_S" == 1 ]]; then
+  (cd "$GEN" && "$PY" -u run_fleet.py --mode api --channel live --from-hours "$S_FROM" --hours "$S_TO" --rate "$RATE" --minutes "$STREAM_MINUTES" > "$LOGS/stream_generator.log" 2>&1; echo "EXIT $?" >> "$LOGS/stream_generator.log") &
+else
+  echo "EXIT 0" > "$LOGS/stream_generator.log"
+fi
 
 last_sent() { grep -E ' sent ' "$1" 2>/dev/null | tail -1 | awk '{print $3}'; }
-EXTRACT_STARTED=0
 while true; do
   sleep 15
   B=$(last_sent "$LOGS/batch_generator.log"); S=$(last_sent "$LOGS/stream_generator.log")
@@ -110,7 +126,7 @@ while true; do
   fi
   X=$(grep -cE '^  20[0-9-]+ [0-9]+:00 ' "$LOGS/extract.log" 2>/dev/null || true)
   printf '  %4ss | batch: %-9s %s | extract: %s hour(s) | stream: %-9s %s | kafka lag %s\n' "$(( $(date +%s) - STARTED ))" \
-    "${B:-warming}" "$([[ $B_DONE == 1 ]] && echo done || echo ...)" "${X:-0}" "${S:-warming}" "$([[ $S_DONE == 1 ]] && echo done || echo ...)" "$(kafka_lag)"
+    "${B:-$([[ $DO_B == 1 ]] && echo warming || echo skipped)}" "$([[ $B_DONE == 1 ]] && echo done || echo ...)" "${X:-0}" "${S:-$([[ $DO_S == 1 ]] && echo warming || echo skipped)}" "$([[ $S_DONE == 1 ]] && echo done || echo ...)" "$(kafka_lag)"
   [[ "$S_DONE" == "1" && "$EXTRACT_STARTED" == "1" ]] && grep -q '^EXIT' "$LOGS/extract.log" 2>/dev/null && break
 done
 grep -q '^EXIT 0' "$LOGS/stream_generator.log" || { echo "stream generator failed - see $LOGS/stream_generator.log"; exit 1; }
