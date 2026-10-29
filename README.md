@@ -1,9 +1,9 @@
 # Enterprise Fleet Telematics Lakehouse & Dynamic Logistics Warehouse
 
-A SIC 8 / 2026 Big Data Engineering graduation project that turns simulated fleet telemetry into auditable operational analytics using a hybrid source system, Microsoft Fabric, Delta Lake, and Power BI.
-
 <img width="736" height="736" alt="502c02a4e4e54f388aafd6410626eb16" src="https://github.com/user-attachments/assets/969883ed-232e-4dbf-bd6e-645b4f4c12f9" />
 
+
+A SIC 8 / 2026 Big Data Engineering graduation project that turns simulated fleet telemetry into auditable operational analytics using a hybrid source system, Microsoft Fabric, Delta Lake, and Power BI.
 
 > **Data notice:** All vehicle, driver, trip, telemetry, and anomaly data in this project is simulated. Dashboard figures describe this simulation and its implemented rules; they are not evidence of real-world fleet incidents or regulatory compliance.
 
