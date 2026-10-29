@@ -117,7 +117,7 @@ else
   echo "EXIT 0" > "$LOGS/stream_generator.log"
 fi
 
-last_sent() { grep -E ' sent ' "$1" 2>/dev/null | tail -1 | awk '{print $3}'; }
+last_sent() { grep -E ' sent ' "$1" 2>/dev/null | tail -1 | awk '{print $3}' || true; }
 while true; do
   sleep 15
   B=$(last_sent "$LOGS/batch_generator.log"); S=$(last_sent "$LOGS/stream_generator.log")
