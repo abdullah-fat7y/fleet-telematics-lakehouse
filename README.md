@@ -49,7 +49,8 @@ The implemented v2 design is hybrid: the simulated fleet and operational source 
 
 ### Architecture diagram
 
-<img width="1280" height="513" alt="Fleet Telematics Preoject Architecture" src="https://github.com/user-attachments/assets/742edd40-1f01-429b-a1ee-90c3a12d74fd" />
+<img width="1280" height="592" alt="Final Architecture" src="https://github.com/user-attachments/assets/6d6cce05-08c5-4b90-92a4-4c5c0735cf18" />
+
 <!-- Add the complete project architecture image here. Keep this Mermaid diagram as the readable, version-controlled architecture. -->
 
 ### Components and why they are used
