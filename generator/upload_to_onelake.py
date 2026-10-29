@@ -3,6 +3,8 @@
     python upload_to_onelake.py landing          # new batch files -> Files/landing/<run_id>/
     python upload_to_onelake.py landing --watch  # keep uploading new files every 30 s (Ctrl+C to stop)
     python upload_to_onelake.py ops              # DLQ file + sender logs -> Files/ops/ (for notebook 04)
+    python upload_to_onelake.py reference        # reference CSVs -> Files/reference/
+    python upload_to_onelake.py truth            # truth table of every v2 run -> Files/truth_v2/<run_id>.csv
 
 Sign-in: a browser window opens once; sign in with the account that has access to the workspace.
 FABRIC_TENANT_ID must be set in generator/.env (the workspace's tenant; never commit it).
@@ -83,9 +85,26 @@ def upload_ops(cfg, fs, root):
             print(f"ops: {os.path.basename(p)} {'uploaded' if ok else 'FAILED'}")
 
 
+def upload_reference(cfg, fs, root):
+    """Reference CSVs (e.g. trips.csv after adding a day) -> Files/reference/."""
+    ref = os.path.join(HERE, cfg["output"]["reference_dir"])
+    for p in sorted(glob.glob(os.path.join(ref, "*.csv"))):
+        ok = upload(fs, p, f"{root}/reference/{os.path.basename(p)}", cfg["streaming"]["retry_delays_s"])
+        print(f"reference: {os.path.basename(p)} {'uploaded' if ok else 'FAILED'}")
+
+
+def upload_truth(cfg, fs, root):
+    """Truth tables of every v2 run (run ids starting with api-) -> Files/truth_v2/<run_id>.csv."""
+    runs = os.path.join(HERE, cfg["output"]["runs_dir"])
+    for p in sorted(glob.glob(os.path.join(runs, "api-*", "telemetry_truth.csv"))):
+        run_id = os.path.basename(os.path.dirname(p))
+        ok = upload(fs, p, f"{root}/truth_v2/{run_id}.csv", cfg["streaming"]["retry_delays_s"])
+        print(f"truth: {run_id} {'uploaded' if ok else 'FAILED'}")
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("what", choices=["landing", "ops"])
+    ap.add_argument("what", choices=["landing", "ops", "reference", "truth"])
     ap.add_argument("--watch", action="store_true", help="landing only: keep uploading on a schedule")
     ap.add_argument("--config", default=os.path.join(HERE, "config.yaml"))
     args = ap.parse_args()
@@ -93,8 +112,8 @@ def main():
     cfg = load_config(args.config)
     read_dotenv(os.path.join(HERE, ".env"))
     fs, root = connect(cfg)
-    if args.what == "ops":
-        upload_ops(cfg, fs, root)
+    if args.what in ("ops", "reference", "truth"):
+        {"ops": upload_ops, "reference": upload_reference, "truth": upload_truth}[args.what](cfg, fs, root)
         return
     upload_landing(cfg, fs, root)
     while args.watch:

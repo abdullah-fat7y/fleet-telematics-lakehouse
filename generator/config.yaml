@@ -6,7 +6,7 @@ seed: 42
 simulation:
   start_time_utc: "2026-11-01T06:00:00Z"
   hours: 24                    # how many hours to simulate in a full run
-  days: 4                      # days of trips in the reference data: day 1 = pilot, 2-3 = batch, 4 = streaming
+  days: 5                      # days of trips: day 1 = pilot, 2-3 = batch, 4 = streaming, 5 = pipeline test data
   reading_interval_s: 30       # one reading per vehicle every 30 seconds (team proposal)
 
 fleet:
