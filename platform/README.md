@@ -58,6 +58,7 @@ cd platform/demo
 ./push_new_data.sh --dry-run        # checks + plan, nothing sent (rehearse with this)
 ./push_new_data.sh                  # day 5: batch 06:00-09:00 (~1.2M) + stream from 09:00, 10 min at 700/s (~420k)
 ./push_new_data.sh --only batch     # just the batch part; later --only stream for the stream part
+./push_new_data.sh --only batch --run-notebooks   # + runs notebooks 13 and 11 in Fabric afterwards
 ```
 
 Checks every component first and refuses a time window that was already sent. Batch and stream run together

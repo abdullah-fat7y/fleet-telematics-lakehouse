@@ -5,6 +5,7 @@
 #   ./push_new_data.sh                           day 5: batch 06:00-09:00 + stream from 09:00 for 10 min at 700/s
 #   ./push_new_data.sh --batch-hours 2 --stream-minutes 5 --rate 500
 #   ./push_new_data.sh --only batch              just the batch part (then later: --only stream)
+#   ./push_new_data.sh --run-notebooks           afterwards also run notebook 13 (+ 11 when a batch was sent) in Fabric
 #
 # Batch : generator -> API (history) -> PostgreSQL -> extractor -> Files/landing_v2   (DAG task 11 loads it)
 # Stream: generator -> API (live) -> PostgreSQL -> Debezium -> Kafka -> bridge -> Eventstream v2 -> bronze
@@ -13,7 +14,7 @@
 # Refuses to send a time window that was already sent (no duplicates), unless --force.
 set -euo pipefail
 
-DAY=5 BATCH_HOURS=3 STREAM_MINUTES=10 RATE=700 DRY_RUN=0 FORCE=0 ONLY=both
+DAY=5 BATCH_HOURS=3 STREAM_MINUTES=10 RATE=700 DRY_RUN=0 FORCE=0 ONLY=both RUN_NB=0
 while [[ $# -gt 0 ]]; do
   case "$1" in
     --day) DAY=$2; shift 2 ;;
@@ -23,7 +24,8 @@ while [[ $# -gt 0 ]]; do
     --dry-run) DRY_RUN=1; shift ;;
     --force) FORCE=1; shift ;;
     --only) ONLY=$2; shift 2 ;;
-    -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
+    --run-notebooks) RUN_NB=1; shift ;;
+    -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
     *) echo "unknown option $1"; exit 2 ;;
   esac
 done
@@ -95,6 +97,7 @@ if [[ "$DRY_RUN" == "1" ]]; then
   [[ "$DO_S" == 1 ]] && echo "  $PY run_fleet.py --mode api --channel live --from-hours $S_FROM --hours $S_TO --rate $RATE --minutes $STREAM_MINUTES"
   [[ "$DO_B" == 1 ]] && echo "  $PY extract.py --incremental"
   echo "  $PY upload_to_onelake.py reference && $PY upload_to_onelake.py truth"
+  [[ "$RUN_NB" == 1 ]] && echo "  $PY run_notebook.py 13_load_reference_and_truth_v2$([[ $DO_B == 1 ]] && echo ' && run_notebook.py 11_load_landing_v2')"
   exit 0
 fi
 
@@ -137,6 +140,15 @@ for i in $(seq 1 60); do L=$(kafka_lag); echo "  kafka lag $L"; [[ "$L" == "0" ]
 
 bold "3. Uploading 5-day trips and truth tables (for notebook 13)"
 (cd "$GEN" && "$PY" upload_to_onelake.py reference && "$PY" upload_to_onelake.py truth) 2>&1 | tee "$LOGS/uploads.log" | grep -E "trips.csv|truth:" || true
+
+if [[ "$RUN_NB" == 1 ]]; then
+  NBS=(13_load_reference_and_truth_v2); [[ "$DO_B" == 1 ]] && NBS+=(11_load_landing_v2)
+  for nb in "${NBS[@]}"; do
+    bold "4. Running notebook $nb in Fabric"
+    (cd "$REPO/platform/fabric" && "$PY" -u run_notebook.py "$nb") 2>&1 | tee -a "$LOGS/notebooks.log" \
+      || echo "  ! $nb did not finish - run it by hand in Fabric (capacity busy? stop other notebook sessions)"
+  done
+fi
 
 AFTER_H=$(psql_q "select count(*) from telemetry_history"); AFTER_L=$(psql_q "select count(*) from telemetry_live")
 B_RUN=$(grep -oE 'api-history-[0-9TZ]+' "$LOGS/batch_generator.log" | head -1); S_RUN=$(grep -oE 'api-live-[0-9TZ]+' "$LOGS/stream_generator.log" | head -1)
