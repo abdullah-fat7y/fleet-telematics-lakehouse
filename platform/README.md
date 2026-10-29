@@ -50,3 +50,16 @@ rewound and the bridge rebuilt; an old container briefly ran alongside, so the c
 twice (24,650 rows, 12,325 distinct `db_id`). Bronze keeps what was received; `db_id` removes the
 duplicates in silver. A plain restart and a rebuild afterwards re-sent nothing. The same incident exposed a
 bridge bug (unacknowledged sends were counted as delivered), fixed before the re-send.
+
+## Live demo: push a new day through the whole pipeline
+
+```bash
+cd platform/demo
+./push_new_data.sh --dry-run        # checks + plan, nothing sent (rehearse with this)
+./push_new_data.sh                  # day 5: batch 06:00-09:00 (~1.2M) + stream from 09:00, 10 min at 700/s (~420k)
+```
+
+Checks every component first and refuses a time window that was already sent. Batch and stream run together
+(~5 min warm-up, ~16 min in total) with a status line every 15 s; then the 5-day trips and the truth tables are
+uploaded. In Fabric afterwards: notebook `13_load_reference_and_truth_v2`, then the DAG
+(`11_load_landing_v2` -> silver -> anomalies -> gold -> dashboard). Logs: `platform/demo/logs/<time>/`.
